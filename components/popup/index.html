@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="popup.js" defer></script>
+    <title>Document</title>
+  </head>
+  <body>
+    <popup-message
+      text="warning! lorem"
+      color="#f44336"
+      duration="3000"
+    ></popup-message>
+
+    <button id="show-popup">Afficher le popup</button>
+    
+    <script>
+      document.getElementById("show-popup").addEventListener("click", function () {
+        const popup = document.createElement("popup-message");
+        popup.setAttribute("text", "Ceci est un message dynamique !");
+        popup.setAttribute("color", "red");
+        popup.setAttribute("duration", "3000");
+        document.body.appendChild(popup);
+      });
+    </script>
+    
+
+  </body>
+</html>
