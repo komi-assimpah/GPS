@@ -5,45 +5,26 @@ class ItinerarySuggestion extends HTMLElement {
   }
 
   connectedCallback() {
-    const wrapper = document.createElement("div");
-    wrapper.classList.add("itinerary-suggestion");
+    // Création du template HTML et CSS
+    const template = document.createElement("template");
+    template.innerHTML = `
+      <div class="itinerary-suggestion">
+        <div class="icon-wrapper"></div>
+        <span class="text">${this.getAttribute("text") || "No itinerary info"}</span>
+        <div class="distance-time">
+          <strong>${this.getAttribute("distance") || "0 Km"}</strong>
+          <strong>${this.getAttribute("time") || "0 Min"}</strong>
+        </div>
+      </div>
 
-    const iconWrapper = document.createElement("div");
-    iconWrapper.classList.add("icon-wrapper");
-
-    // Dossier par défaut pour les icons
-    const iconsFolder = "../../assets/icons/";
-
-    const icons = this.getAttribute("icons").split(",");
-    icons.forEach((iconSrc, index) => {
-      const icon = document.createElement("img");
-      icon.src = `${iconsFolder}${iconSrc.trim()}`; // Utilise le dossier par défaut pour charger les icons
-
-      icon.classList.add("icon");
-      iconWrapper.appendChild(icon);
-
-      if (index < icons.length - 1) {
-        const separator = document.createElement("span");
-        separator.textContent = " => ";
-        iconWrapper.appendChild(separator);
-      }
-    });
-
-    const text = document.createElement("span");
-    text.textContent = this.getAttribute("text") || "No itinerary info";
-
-    const distance = document.createElement("strong");
-    distance.textContent = this.getAttribute("distance") || "0 Km";
-
-    const style = document.createElement("style");
-    style.textContent = `
+      <style>
         .itinerary-suggestion {
-            display: flex; 
-            justify-content: space-between;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            background-color: #fff;
+          display: flex;
+          justify-content: space-between;
+          padding: 10px;
+          border: 1px solid #ddd;
+          border-radius: 5px;
+          background-color: #fff;
         }
         .icon-wrapper {
           display: flex;
@@ -54,17 +35,42 @@ class ItinerarySuggestion extends HTMLElement {
           height: 24px;
           margin-right: 5px;
         }
-        span {
+        .text {
           color: #333;
         }
-        strong {
+        .distance-time {
+          text-align: right;
+          color: #333;
+        }
+          
+        .distance-time strong {
           font-size: 1.2em;
-          color: #333;
+          display: block;
         }
-      `;
+      </style>
+    `;
 
-    this.shadowRoot.append(style, wrapper);
-    wrapper.append(iconWrapper, text, distance);
+    // Clonage du contenu du template dans le shadow DOM
+    this.shadowRoot.appendChild(template.content.cloneNode(true));
+
+    // Récupération de l'élément iconWrapper dans le shadow DOM
+    const iconWrapper = this.shadowRoot.querySelector(".icon-wrapper");
+
+    // Charger les icônes
+    const iconsFolder = "../../assets/icons/";
+    const icons = this.getAttribute("icons").split(",");
+    icons.forEach((iconSrc, index) => {
+      const icon = document.createElement("img");
+      icon.src = `${iconsFolder}${iconSrc.trim()}`;
+      icon.classList.add("icon");
+      iconWrapper.appendChild(icon);
+
+      if (index < icons.length - 1) {
+        const separator = document.createElement("span");
+        separator.textContent = " => ";
+        iconWrapper.appendChild(separator);
+      }
+    });
   }
 }
 
