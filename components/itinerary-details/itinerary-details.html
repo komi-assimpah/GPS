@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Itinerary Component Mock</title>
+  <script type="module" src="itinerary-details.js"></script>
+</head>
+<body>
+  <itinerary-step-list></itinerary-step-list>
+
+  <script>
+    // Mock des données de l'API
+    const mockData = [
+      { icon: "walker.png", name: "Sophia Antipolis", distance: "1.0 Km", time: "13 Min" },
+      { icon: "cycling.png", name: "Saint-Philippe", distance: "6.9 Km", time: "31 Min" },
+      { icon: "walker.png", name: "Chaudon", distance: "1.0 Km", time: "15 Min" },
+      { icon: "location.png", name: "Musée Picasso", distance: "", time: "" }
+    ];
+
+    window.onload = () => {
+      const itineraryComponent = document.querySelector("itinerary-step-list");
+      if (typeof itineraryComponent.updateSteps === "function") {
+        itineraryComponent.updateSteps(mockData);
+      } else {
+        console.error("updateSteps n'est pas une fonction sur itineraryComponent");
+      }
+    };
+  </script>
+</body>
+</html>
