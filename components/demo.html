@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+  <title>itinerary-suggestion-component</title>
+</head>
+
+<body>
+
+  <!-- <itinerary-suggestion id="suggestion-component" text="Via Chemin de St Claude" distance="9.7 Km" time="49 Min"
+    icons="walker.png, cycling.png, walker.png">
+  </itinerary-suggestion>
+
+  <itinerary-suggestion icons="cycling.png" text="deee" distance="zzdkm"></itinerary-suggestion>
+
+  <script>
+    const suggestionComponent = document.getElementById("suggestion-component");
+
+    suggestionComponent.addEventListener("show-details", (event) => {
+      // Créer le nouveau composant de détails
+      const detailComponent = document.createElement("itinerary-details");      
+      detailComponent.updateSteps(event.detail.steps);
+
+      // Remplacer le composant suggestion par le composant de détails
+      suggestionComponent.replaceWith(detailComponent);
+    });
+  </script> -->
+
+
+  <div id="itineraries">
+    <itinerary-suggestion id="suggestion1" text="Via Chemin de St Claude" distance="9.7 Km" time="49 Min" icons="walker.png,cycling.png,walker.png"></itinerary-suggestion>
+    <itinerary-suggestion id="suggestion2" text="deee" distance="zzdkm" icons="cycling.png"></itinerary-suggestion>
+  </div>
+  
+  <style>
+    .hidden {
+      display: none;
+    }
+  </style>
+  
+  <script src="/components/itinerary-suggestion/itinerary-suggestion.js" defer></script>
+  <script src="/components/itinerary-details/itinerary-details.js" defer></script>
+  <script src="../interaction.js" defer></script>
+</body>
+
+</html>

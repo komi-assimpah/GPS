@@ -5,7 +5,6 @@ class ItinerarySuggestion extends HTMLElement {
   }
 
   connectedCallback() {
-    // Création du template HTML et CSS
     const template = document.createElement("template");
     template.innerHTML = `
       <div class="itinerary-suggestion">
@@ -25,6 +24,7 @@ class ItinerarySuggestion extends HTMLElement {
           border: 1px solid #ddd;
           border-radius: 5px;
           background-color: #fff;
+          cursor: pointer;
         }
         .icon-wrapper {
           display: flex;
@@ -42,21 +42,15 @@ class ItinerarySuggestion extends HTMLElement {
           text-align: right;
           color: #333;
         }
-          
         .distance-time strong {
           font-size: 1.2em;
           display: block;
         }
       </style>
     `;
-
-    // Clonage du contenu du template dans le shadow DOM
     this.shadowRoot.appendChild(template.content.cloneNode(true));
 
-    // Récupération de l'élément iconWrapper dans le shadow DOM
     const iconWrapper = this.shadowRoot.querySelector(".icon-wrapper");
-
-    // Charger les icônes
     const iconsFolder = "../../assets/icons/";
     const icons = this.getAttribute("icons").split(",");
     icons.forEach((iconSrc, index) => {
@@ -67,9 +61,23 @@ class ItinerarySuggestion extends HTMLElement {
 
       if (index < icons.length - 1) {
         const separator = document.createElement("span");
-        separator.textContent = " => ";
+        separator.textContent = " -> ";
         iconWrapper.appendChild(separator);
       }
+    });
+
+    // Ajoute un écouteur de clic pour déclencher l'événement personnalisé avec l'ID du composant
+    this.addEventListener("click", () => {
+      const details = {
+        steps: [
+          { icon: "walker.png", name: "Sophia Antipolis", distance: "1.0 Km", time: "13 Min" },
+          { icon: "cycling.png", name: "Saint-Philippe", distance: "6.9 Km", time: "31 Min" },
+          { icon: "walker.png", name: "Chaudon", distance: "1.0 Km", time: "15 Min" },
+          { icon: "location.png", name: "Musée Picasso", distance: "", time: "" }
+        ]
+      };
+      const id = this.getAttribute("id");
+      this.dispatchEvent(new CustomEvent("show-details", { detail: { details, id }, bubbles: true }));
     });
   }
 }
