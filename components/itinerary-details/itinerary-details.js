@@ -1,4 +1,4 @@
-class ItineraryStepList extends HTMLElement {
+class ItineraryDetails extends HTMLElement {
     constructor() {
       super();
       this.attachShadow({ mode: "open" });
@@ -75,8 +75,6 @@ class ItineraryStepList extends HTMLElement {
       return template;
     }
   
-    connectedCallback() {}
-  
     updateSteps(steps) {
       const stepsContainer = this.shadowRoot.querySelector("#steps-container");
       stepsContainer.innerHTML = "";
@@ -120,5 +118,5 @@ class ItineraryStepList extends HTMLElement {
     }
   }
   
-  customElements.define("itinerary-step-list", ItineraryStepList);
+  customElements.define("itinerary-details", ItineraryDetails);
   
