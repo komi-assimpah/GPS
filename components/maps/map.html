@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Map with Leaflet</title>
+  <link rel="stylesheet" href="../../leaflet-routing-machine-3.2.12/dist/leaflet-routing-machine.css">
+  <link rel="stylesheet" href="../../leaflet-1.8.0/leaflet.css">
+</head>
+
+<body>
+  <h1>Interactive Map</h1>
+  <div id="map" style="width:100%; height: 100vh"></div>
+  <script src="../../leaflet-1.8.0/leaflet.js"></script>
+  <script src="../../leaflet-routing-machine-3.2.12/dist/leaflet-routing-machine.js"></script>
+
+
+  <script>
+
+    var map = L.map('map').setView([47.2380, 7.9956], 5);
+    mapLink = "<a href='http://openstreetmap.org'>OpenStreetMap</a>";
+    L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', { attribution: 'Leaflet &copy; ' + mapLink + ', contribution', maxZoom: 18 }).addTo(map);
+
+    var taxiIcon = L.icon({
+      iconUrl: '../../assets/img/riding.png',
+      iconSize: [50, 50]
+    })
+
+    var marker = L.marker([43.695, 7.267], { icon: taxiIcon }).addTo(map);
+
+    map.on('click', function (dest) {
+      console.log(dest)
+      var destMarker = L.marker([dest.latlng.lat, dest.latlng.lng]).addTo(map);
+      L.Routing.control({
+        waypoints: [
+          L.latLng(43.695, 7.267),
+          L.latLng(dest.latlng.lat, dest.latlng.lng)
+        ]
+      }).on('routesfound', function (dest) {
+        var routes = dest.routes;
+        console.log("on going routes : ",routes);
+
+        dest.routes[0].coordinates.forEach(function (coord, index) {
+          setTimeout(function () {
+            marker.setLatLng([coord.lat, coord.lng]);
+          }, 10 * index)
+        })
+
+      }).addTo(map);
+    });
+
+
+
+
+
+
+  </script>
+
+
+
+</body>
+
+</html>
