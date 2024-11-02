@@ -98,6 +98,13 @@ class SearchBar extends HTMLElement {
             }));
         }
     }
+
+    updateInputWithCoordinates(coordinateText) {
+        this.inputElement.value = coordinateText;
+    }
+
+
+
 }
 
 customElements.define("search-bar", SearchBar);

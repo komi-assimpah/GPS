@@ -42,6 +42,16 @@
           const { coordinates } = event.detail;
           mapComponent.setAttribute("end", JSON.stringify(coordinates));
       });
+
+
+
+
+    // Écoute de l'événement `destination-selected`
+    mapComponent.addEventListener("destination-selected", (event) => {
+    const { address } = event.detail;
+    console.log("Adresse reçue :", address);
+    destinationBar.updateInputWithCoordinates(address);
+});
     </script>
 </body>
 </html>

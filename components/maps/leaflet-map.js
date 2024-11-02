@@ -80,9 +80,33 @@ class LeafletMap extends HTMLElement {
         );
 
         // Écoute des clics pour mettre à jour la destination
-        this.map.on("click", (event) => {
+        this.map.on("click", async (event) => {
             const { lat, lng } = event.latlng;
-            this.setAttribute("end", JSON.stringify([lat, lng])); // Met à jour l'attribut `end`
+            // console.log("click long", lng);
+            // console.log("click lat", lat);
+            //this.setAttribute("end", JSON.stringify([lat, lng])); // Met à jour l'attribut `end`
+
+            // const address = this.fetchAddressFromCoordinates(lat, lng).then((adressget) => {
+            //     console.log("adressget", address);
+            //     this.setAttribute("end", JSON.stringify(address)); // Met à jour l'attribut `end`
+            // });
+
+            // Attendre la résolution de fetchAddressFromCoordinates pour obtenir l'adresse
+            const address = await this.fetchAddressFromCoordinates(lat, lng);
+            this.setAttribute("end", JSON.stringify(address)); // Met à jour l'attribut `end`
+
+
+            // Émettre un événement pour informer la `search-bar` de destination
+            this.dispatchEvent(new CustomEvent("destination-selected", {
+                detail: {
+                    address: address,
+                    coordinates: [lat, lng]
+                },
+                bubbles: true,
+                composed: true
+            }));
+
+
         });
     }
 
@@ -121,6 +145,10 @@ class LeafletMap extends HTMLElement {
     updateRoute() {
         if (!this.start || !this.end || !this.scriptsLoaded) return;
 
+        // Supprime le marqueur de destination actuel s'il existe
+        if (this.destMarker) {
+            this.map.removeLayer(this.destMarker);
+        }
         // Ajoute un nouveau marqueur de destination
         this.destMarker = L.marker(this.end).addTo(this.map);
 
@@ -143,9 +171,9 @@ class LeafletMap extends HTMLElement {
     animateRoute(routeEvent) {
         const routes = routeEvent.routes[0].coordinates;
         let index = 0;
-  
+
         if (this.animation) clearInterval(this.animation);
-  
+
         this.animation = setInterval(() => {
             if (index < routes.length) {
                 this.originMarker.setLatLng([routes[index].lat, routes[index].lng]);
@@ -154,6 +182,29 @@ class LeafletMap extends HTMLElement {
                 clearInterval(this.animation); // Stop animation once route is completed
             }
         }, this.animationInterval);
+    }
+
+    // Méthode pour obtenir une adresse à partir de coordonnées (latitude, longitude)
+    async fetchAddressFromCoordinates(lat, lon) {
+        const url = `https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`;
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.features && data.features.length > 0) {
+                // Récupère l'adresse textuelle
+                const address = data.features[0].properties.label;
+                console.log("Adresse trouvée:", address);
+                return address; // Renvoie l'adresse
+            } else {
+                console.warn("Aucune adresse trouvée pour ces coordonnées.");
+                return "Adresse inconnue";
+            }
+        } catch (error) {
+            console.error("Erreur lors de la récupération de l'adresse :", error);
+            return "Erreur lors de la récupération de l'adresse";
+        }
     }
 }
 
