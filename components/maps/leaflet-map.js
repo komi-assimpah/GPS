@@ -86,15 +86,8 @@ class LeafletMap extends HTMLElement {
             // console.log("click lat", lat);
             //this.setAttribute("end", JSON.stringify([lat, lng])); // Met à jour l'attribut `end`
 
-            // const address = this.fetchAddressFromCoordinates(lat, lng).then((adressget) => {
-            //     console.log("adressget", address);
-            //     this.setAttribute("end", JSON.stringify(address)); // Met à jour l'attribut `end`
-            // });
-
-            // Attendre la résolution de fetchAddressFromCoordinates pour obtenir l'adresse
             const address = await this.fetchAddressFromCoordinates(lat, lng);
             this.setAttribute("end", JSON.stringify(address)); // Met à jour l'attribut `end`
-
 
             // Émettre un événement pour informer la `search-bar` de destination
             this.dispatchEvent(new CustomEvent("destination-selected", {
@@ -195,7 +188,7 @@ class LeafletMap extends HTMLElement {
             if (data.features && data.features.length > 0) {
                 // Récupère l'adresse textuelle
                 const address = data.features[0].properties.label;
-                console.log("Adresse trouvée:", address);
+                // console.log("Adresse trouvée:", address);
                 return address; // Renvoie l'adresse
             } else {
                 console.warn("Aucune adresse trouvée pour ces coordonnées.");
