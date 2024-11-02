@@ -1,135 +1,160 @@
 class LeafletMap extends HTMLElement {
-  static get observedAttributes() {
-      return ['start', 'end'];
-  }
+    static get observedAttributes() {
+        return ["start", "end"];
+    }
 
-  constructor() {
-      super();
-      this.attachShadow({ mode: "open" });
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+        this.start = [43.695, 7.267]; // Coordonnées initiales de départ
+        this.end = null;
 
-      this.start = [43.695, 7.267]; // Coordonnées initiales de départ
-      this.end = null; // Coordonnées initiales de destination
+        this.originMarker = null; // Marqueur d'origine unique
+        this.destMarker = null; // Marqueur de destination unique
+        this.routeControl = null; // Contrôle de routage unique
+        this.animationInterval = 30; // Intervalle de mise à jour pour l'animation (en ms)
 
-      this.originMarker = null; // Marqueur d'origine unique
-      this.destMarker = null; // Marqueur de destination unique
+        this.scriptsLoaded = false; // Ajout d'un indicateur pour vérifier si les scripts sont chargés
+    }
 
-      this.routeControl = null; // Contrôle de routage unique
-      this.animationInterval = 30; // Intervalle de mise à jour pour l'animation (en ms)
-
-  }
-
-  connectedCallback() {
-      const template = document.createElement("template");
-      template.innerHTML = `
+    connectedCallback() {
+        const template = document.createElement("template");
+        template.innerHTML = `
           <link rel="stylesheet" href="../../leaflet-routing-machine-3.2.12/dist/leaflet-routing-machine.css">
           <link rel="stylesheet" href="../../leaflet-1.8.0/leaflet.css">
-          <style>
-              #map {
-                  width: 100%;
-                  height: 100vh;
-              }
-          </style>
-          <div id="map"></div>
+          <div id="map" style="width: 100%; height: 100vh;"></div>
       `;
-      this.shadowRoot.appendChild(template.content.cloneNode(true));
+        this.shadowRoot.appendChild(template.content.cloneNode(true));
 
-      // Chargement dynamique des scripts JavaScript
-      this.loadScript("../../leaflet-1.8.0/leaflet.js")
-          .then(() => this.loadScript("../../leaflet-routing-machine-3.2.12/dist/leaflet-routing-machine.js"))
-          .then(() => this.initializeMap())
-          .catch((error) => console.error("Échec du chargement des scripts Leaflet:", error));
-  }
+        // Charger les scripts Leaflet de manière asynchrone avant d'initialiser la carte
+        this.loadScript("../../leaflet-1.8.0/leaflet.js")
+            .then(() =>
+                this.loadScript(
+                    "../../leaflet-routing-machine-3.2.12/dist/leaflet-routing-machine.js"
+                )
+            )
+            .then(() => {
+                this.scriptsLoaded = true;
+                this.loadMap();
+            })
+            .catch((error) =>
+                console.error("Échec du chargement des scripts Leaflet:", error)
+            );
+    }
 
-  loadScript(src) {
-      return new Promise((resolve, reject) => {
-          const script = document.createElement("script");
-          script.src = src;
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error(`Échec du chargement du script: ${src}`));
-          this.shadowRoot.appendChild(script);
-      });
-  }
+    loadScript(src) {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = src;
+            script.onload = () => resolve();
+            script.onerror = () =>
+                reject(new Error(`Échec du chargement du script: ${src}`));
+            this.shadowRoot.appendChild(script);
+        });
+    }
 
-  initializeMap() {
-      const mapElement = this.shadowRoot.getElementById("map");
+    loadMap() {
+        if (!this.scriptsLoaded) return; // Assurez-vous que les scripts sont chargés
 
-      // Initialisation de la carte
-      this.map = L.map(mapElement).setView(this.start, 5);
-      L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-          attribution: 'Leaflet &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors',
-          maxZoom: 18
-      }).addTo(this.map);
+        const mapElement = this.shadowRoot.getElementById("map");
 
-      // Configuration de l'icône de taxi
-      const taxiIcon = L.icon({
-          iconUrl: '../../assets/img/riding.png',
-          iconSize: [50, 50]
-      });
+        // Initialisation de la carte
+        //this.map = L.map(mapElement).setView([43.695, 7.267], 5);
+        this.map = L.map(mapElement).setView(this.start, 5);
 
-      // Ajout du marqueur de taxi initial
-      this.marker = L.marker(this.start, { icon: taxiIcon }).addTo(this.map);
+        L.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
+            attribution:
+                'Leaflet &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors',
+            maxZoom: 18,
+        }).addTo(this.map);
 
-      // Écoute des clics sur la carte pour définir la destination
-      this.map.on('click', (dest) => this.handleMapClick(dest));
-  }
+        // Configuration de l'icône de taxi
+        const taxiIcon = L.icon({
+            iconUrl: "../../assets/img/riding.png",
+            iconSize: [50, 50],
+        });
 
-  attributeChangedCallback(name, oldValue, newValue) {
-      if (name === 'start') {
-          this.start = JSON.parse(newValue); // Expects JSON string like "[lat, lng]"
-          this.updateRoute();
-      } else if (name === 'end') {
-          this.end = JSON.parse(newValue);
-          this.updateRoute();
-      }
-  }
+        // Ajout du marqueur de taxi initial
+        this.originMarker = L.marker(this.start, { icon: taxiIcon }).addTo(
+            this.map
+        );
 
-  handleMapClick(dest) {
-      this.setAttribute("end", JSON.stringify([dest.latlng.lat, dest.latlng.lng]));
-  }
+        // Écoute des clics pour mettre à jour la destination
+        this.map.on("click", (event) => {
+            const { lat, lng } = event.latlng;
+            this.setAttribute("end", JSON.stringify([lat, lng])); // Met à jour l'attribut `end`
+        });
+    }
 
-  updateRoute() {
-      // Supprime le marqueur de destination actuel s'il existe
-      if (this.destMarker) {
-          this.map.removeLayer(this.destMarker);
-      }
+    attributeChangedCallback(name, oldValue, newValue) {
+        const value = JSON.parse(newValue);
+        if (name === "start") {
+            this.start = value;
+            this.updateRoute();
+            console.log("start long ", value[0]);
+            console.log("console lag", value[1]);
 
-      if (!this.end) return; // Si aucune destination n'est définie, arrêtez
+            this.updateOriginMarker(); // Mettre à jour le marqueur
+        } else if (name === "end") {
+            this.end = value;
+            this.updateRoute();
+        }
+    }
 
-      // Ajoute un nouveau marqueur de destination
-      this.destMarker = L.marker(this.end).addTo(this.map);
+    updateOriginMarker() {
+        if (!this.start || !this.map) return;
+        // Si le marqueur existe déjà, mettez à jour sa position
+        if (this.originMarker) {
+            this.originMarker.setLatLng(L.latLng(...this.start)); // Utilise `originMarker` ici
+        } else {
+            // Sinon, créez un nouveau marqueur avec l'icône de taxi et ajoutez-le à la carte
+            const taxiIcon = L.icon({
+                iconUrl: "../../assets/img/riding.png",
+                iconSize: [50, 50],
+            });
+            this.originMarker = L.marker(L.latLng(...this.start), {
+                icon: taxiIcon,
+            }).addTo(this.map);
+        }
+    }
 
-      // Initialise ou met à jour le contrôle de routage
-      if (this.routeControl) {
-          this.routeControl.setWaypoints([
-              L.latLng(...this.start),
-              L.latLng(...this.end)
-          ]);
-      } else {
-          this.routeControl = L.Routing.control({
-              waypoints: [
-                  L.latLng(...this.start),
-                  L.latLng(...this.end)
-              ],
-              addWaypoints: false
-          }).on('routesfound', (routeEvent) => this.animateRoute(routeEvent)).addTo(this.map);
-      }
-  }
+    updateRoute() {
+        if (!this.start || !this.end || !this.scriptsLoaded) return;
 
-  animateRoute(routeEvent) {
-      const routes = routeEvent.routes[0].coordinates;
-      let index = 0;
+        // Ajoute un nouveau marqueur de destination
+        this.destMarker = L.marker(this.end).addTo(this.map);
 
-      if (this.animation) clearInterval(this.animation);
+        // Initialise ou met à jour le contrôle de routage
+        if (this.routeControl) {
+            this.routeControl.setWaypoints([
+                L.latLng(...this.start),
+                L.latLng(...this.end),
+            ]);
+        } else {
+            this.routeControl = L.Routing.control({
+                waypoints: [L.latLng(...this.start), L.latLng(...this.end)],
+                addWaypoints: false,
+            })
+                .on("routesfound", (routeEvent) => this.animateRoute(routeEvent))
+                .addTo(this.map);
+        }
+    }
 
-      this.animation = setInterval(() => {
-          if (index < routes.length) {
-              this.marker.setLatLng([routes[index].lat, routes[index].lng]);
-              index++;
-          } else {
-              clearInterval(this.animation); // Stop animation once route is completed
-          }
-      }, this.animationInterval);
-  }
+    animateRoute(routeEvent) {
+        const routes = routeEvent.routes[0].coordinates;
+        let index = 0;
+  
+        if (this.animation) clearInterval(this.animation);
+  
+        this.animation = setInterval(() => {
+            if (index < routes.length) {
+                this.originMarker.setLatLng([routes[index].lat, routes[index].lng]);
+                index++;
+            } else {
+                clearInterval(this.animation); // Stop animation once route is completed
+            }
+        }, this.animationInterval);
+    }
 }
 
 customElements.define("leaflet-map", LeafletMap);
