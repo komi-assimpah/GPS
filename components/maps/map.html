@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Map with Leaflet</title>
+  <script src="leaflet/leaflet.js"></script>
+  <link rel="stylesheet" href="leaflet/leaflet.css">
+  <script src="map-component.js" defer></script>
+</head>
+<body>
+  <h1>Interactive Map</h1>
+  <map-component></map-component>
+
+  <script>
+    const mapComponent = document.querySelector("map-component");
+
+    // Example of using the component's methods to add a route
+    const exampleRoute = [
+      [43.6163, 7.0715], // Start
+      [43.6195, 7.0725], // Midpoint
+      [43.6246, 7.0751]  // End
+    ];
+    mapComponent.plotRoute(exampleRoute);
+  </script>
+</body>
+</html>

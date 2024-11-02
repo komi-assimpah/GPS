@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test SearchBar</title>
+    <!-- Inclure le composant SearchBar -->
+    <script src="search-bar.js" defer></script>
+  </head>
+  <body>
+    <h1>Test des Search Bars</h1>
+    
+    <!-- Deux search-bars avec des placeholders différents -->
+
+    <search-bar placeholder="Enter an address"></search-bar>
+
+    <script>
+        document.querySelector("search-bar").addEventListener("address-selected", (event) => {
+            console.log("Adresse sélectionnée :", event.detail.address);
+            console.log("Coordonnées GPS :", event.detail.coordinates);
+        });
+    </script>
+    
+
+  </body>
+</html>
