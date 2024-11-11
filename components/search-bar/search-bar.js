@@ -21,6 +21,7 @@ class SearchBar extends HTMLElement {
                 }
                 input:focus {
                     border-color: #CE472F;
+                    border-width: 2px;
                     box-shadow: 0 0 5px rgba(206, 71, 47, 0.5); 
                     }
                 .suggestions {
