@@ -17,7 +17,12 @@ class SearchBar extends HTMLElement {
                     border-radius: 8px;
                     border: 1px solid #ccc;
                     outline: none;
+                    transition: border-color 0.3s ease;
                 }
+                input:focus {
+                    border-color: #CE472F;
+                    box-shadow: 0 0 5px rgba(206, 71, 47, 0.5); 
+                    }
                 .suggestions {
                     position: absolute;
                     top: 100%;
@@ -27,6 +32,7 @@ class SearchBar extends HTMLElement {
                     max-height: 150px;
                     overflow-y: auto;
                     z-index: 10;
+                    display: none; /* Masquer par défaut */
                 }
                 .suggestion-item {
                     padding: 10px;
@@ -55,6 +61,8 @@ class SearchBar extends HTMLElement {
             const query = this.inputElement.value;
             if (query.length >= 3) {
                 this.fetchSuggestions(query);
+            } else {
+                this.suggestionsElement.style.display = "none"; // Masquer si moins de 3 caractères
             }
         }, 500);
     }
@@ -72,21 +80,28 @@ class SearchBar extends HTMLElement {
 
     renderSuggestions(suggestions) {
         this.suggestionsElement.innerHTML = "";
-        suggestions.forEach((suggestion) => {
-            const item = document.createElement("div");
-            item.textContent = suggestion.properties.label;
-            item.classList.add("suggestion-item");
-            item.dataset.latitude = suggestion.geometry.coordinates[1];
-            item.dataset.longitude = suggestion.geometry.coordinates[0];
-            item.dataset.value = suggestion.properties.label;
-            this.suggestionsElement.appendChild(item);
-        });
+        
+        if (suggestions.length > 0) {
+            this.suggestionsElement.style.display = "block"; // Afficher les suggestions
+            suggestions.forEach((suggestion) => {
+                const item = document.createElement("div");
+                item.textContent = suggestion.properties.label;
+                item.classList.add("suggestion-item");
+                item.dataset.latitude = suggestion.geometry.coordinates[1];
+                item.dataset.longitude = suggestion.geometry.coordinates[0];
+                item.dataset.value = suggestion.properties.label;
+                this.suggestionsElement.appendChild(item);
+            });
+        } else {
+            this.suggestionsElement.style.display = "none"; // Masquer si aucune suggestion
+        }
     }
 
     selectSuggestion(event) {
         if (event.target.classList.contains("suggestion-item")) {
             this.inputElement.value = event.target.dataset.value;
             this.suggestionsElement.innerHTML = "";
+            this.suggestionsElement.style.display = "none"; // Masquer après sélection
             const latitude = parseFloat(event.target.dataset.latitude);
             const longitude = parseFloat(event.target.dataset.longitude);
             this.dispatchEvent(new CustomEvent("address-selected", {
@@ -102,9 +117,6 @@ class SearchBar extends HTMLElement {
     updateInputWithCoordinates(coordinateText) {
         this.inputElement.value = coordinateText;
     }
-
-
-
 }
 
 customElements.define("search-bar", SearchBar);
