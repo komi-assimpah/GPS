@@ -16,7 +16,7 @@ class PopupMessage extends HTMLElement {
     const duration = this.getAttribute("duration") || 3000;
 
     const style = document.createElement("style");
-    style.textContent = `
+    /*style.textContent = `
         .popup {
           position: fixed;
           // bottom: 20px;
@@ -26,6 +26,29 @@ class PopupMessage extends HTMLElement {
           border-radius: 5px;
           opacity: 0;
           animation: fadein 0.5s forwards, fadeout 0.5s ${duration}ms forwards;
+        }
+        @keyframes fadein {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes fadeout {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+      `;*/
+      style.textContent = `
+        .popup {
+          position: fixed;
+          top: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          padding: 10px 20px;
+          color: white;
+          border-radius: 5px;
+          opacity: 0;
+          animation: fadein 0.5s forwards, fadeout 0.5s ${duration}ms forwards;
+          z-index: 1000; /* Assure que le popup est au-dessus de la carte */
+          box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
         }
         @keyframes fadein {
           from { opacity: 0; }
