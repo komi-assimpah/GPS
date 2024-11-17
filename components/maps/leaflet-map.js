@@ -6,12 +6,12 @@ class LeafletMap extends HTMLElement {
     constructor() {
         super();
         this.attachShadow({ mode: "open" });
-        this.start = [43.695, 7.267]; // Coordonnées initiales de départ
+        this.start = [43.69676878749648, 7.2787016118204555]; // Coordonnées initiales de départ
         this.end = null;
 
         this.originMarker = null; // Marqueur d'origine unique
         this.destMarker = null; // Marqueur de destination unique
-        this.routeControl = null; // Contrôle de routage unique
+        this.cyclistMarker = null; // Marqueur de cycliste unique
         this.animationInterval = 30; // Intervalle de mise à jour pour l'animation (en ms)
 
         this.scriptsLoaded = false; // Ajout d'un indicateur pour vérifier si les scripts sont chargés
@@ -20,7 +20,6 @@ class LeafletMap extends HTMLElement {
     connectedCallback() {
         const template = document.createElement("template");
         template.innerHTML = `
-          <link rel="stylesheet" href="../../leaflet-routing-machine-3.2.12/dist/leaflet-routing-machine.css">
           <link rel="stylesheet" href="../../leaflet-1.8.0/leaflet.css">
           <div id="map" style="width: 100%; height: 100vh;"></div>
       `;
@@ -28,11 +27,6 @@ class LeafletMap extends HTMLElement {
 
         // Charger les scripts Leaflet de manière asynchrone avant d'initialiser la carte
         this.loadScript("../../leaflet-1.8.0/leaflet.js")
-            .then(() =>
-                this.loadScript(
-                    "../../leaflet-routing-machine-3.2.12/dist/leaflet-routing-machine.js"
-                )
-            )
             .then(() => {
                 this.scriptsLoaded = true;
                 this.loadMap();
@@ -58,9 +52,7 @@ class LeafletMap extends HTMLElement {
 
         const mapElement = this.shadowRoot.getElementById("map");
 
-        // Initialisation de la carte
-        //this.map = L.map(mapElement).setView([43.695, 7.267], 5);
-        this.map = L.map(mapElement).setView(this.start, 5);
+        this.map = L.map(mapElement).setView(this.start, 16);
 
         L.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
             attribution:
@@ -68,23 +60,14 @@ class LeafletMap extends HTMLElement {
             maxZoom: 18,
         }).addTo(this.map);
 
-        // Configuration de l'icône de taxi
-        const taxiIcon = L.icon({
-            iconUrl: "../../assets/img/riding.png",
-            iconSize: [50, 50],
-        });
-
-        // Ajout du marqueur de taxi initial
-        this.originMarker = L.marker(this.start, { icon: taxiIcon }).addTo(
-            this.map
-        );
+        this.addStartMarker(); // Ajoute le marqueur de départ
 
         // Écoute des clics pour mettre à jour la destination
         this.map.on("click", async (event) => {
             const { lat, lng } = event.latlng;
-            // console.log("click long", lng);
-            // console.log("click lat", lat);
-            //this.setAttribute("end", JSON.stringify([lat, lng])); // Met à jour l'attribut `end`
+            console.log("click long", lng);
+            console.log("click lat", lat);
+            this.setAttribute("end", JSON.stringify([lat, lng])); // Met à jour l'attribut `end`
 
             const address = await this.fetchAddressFromCoordinates(lat, lng);
             this.setAttribute("end", JSON.stringify(address)); // Met à jour l'attribut `end`
@@ -98,8 +81,6 @@ class LeafletMap extends HTMLElement {
                 bubbles: true,
                 composed: true
             }));
-
-
         });
     }
 
@@ -107,15 +88,37 @@ class LeafletMap extends HTMLElement {
         const value = JSON.parse(newValue);
         if (name === "start") {
             this.start = value;
+            this.addStartMarker();
             this.updateRoute();
-            console.log("start long ", value[0]);
-            console.log("console lag", value[1]);
-
-            this.updateOriginMarker(); // Mettre à jour le marqueur
         } else if (name === "end") {
             this.end = value;
+            this.addEndMarker();
             this.updateRoute();
         }
+    }
+
+    addStartMarker() {
+        const startIcon = L.icon({
+            iconUrl: "../../assets/icons/pin.png", // Icône pour le départ
+            iconSize: [40, 40],
+        });
+
+        if (this.originMarker) {
+            this.map.removeLayer(this.originMarker);
+        }
+        this.originMarker = L.marker(this.start, { icon: startIcon }).addTo(this.map);
+    }
+
+    addEndMarker() {
+        const endIcon = L.icon({
+            iconUrl: "../../assets/icons/location-pin.png", // Icône pour la destination
+            iconSize: [40, 40],
+        });
+
+        if (this.destMarker) {
+            this.map.removeLayer(this.destMarker);
+        }
+        this.destMarker = L.marker(this.end, { icon: endIcon }).addTo(this.map);
     }
 
     updateOriginMarker() {
@@ -125,51 +128,74 @@ class LeafletMap extends HTMLElement {
             this.originMarker.setLatLng(L.latLng(...this.start)); // Utilise `originMarker` ici
         } else {
             // Sinon, créez un nouveau marqueur avec l'icône de taxi et ajoutez-le à la carte
-            const taxiIcon = L.icon({
-                iconUrl: "../../assets/img/riding.png",
-                iconSize: [50, 50],
-            });
-            this.originMarker = L.marker(L.latLng(...this.start), {
-                icon: taxiIcon,
-            }).addTo(this.map);
+            this.addStartMarker();
         }
     }
 
     updateRoute() {
-        if (!this.start || !this.end || !this.scriptsLoaded) return;
-
-        // Supprime le marqueur de destination actuel s'il existe
-        if (this.destMarker) {
-            this.map.removeLayer(this.destMarker);
+        if (!this.start && !this.end){
+            console.log("erreur");
+            return;
         }
-        // Ajoute un nouveau marqueur de destination
-        this.destMarker = L.marker(this.end).addTo(this.map);
+        const apiKey = "5b3ce3597851110001cf6248863d8fc1bc55493fa434eea86000ea6e"; // Remplacez par votre clé OpenRouteService
+        const url = `https://api.openrouteservice.org/v2/directions/cycling-regular?api_key=${apiKey}&start=${this.start[1]},${this.start[0]}&end=${this.end[1]},${this.end[0]}`;
 
-        // Initialise ou met à jour le contrôle de routage
-        if (this.routeControl) {
-            this.routeControl.setWaypoints([
-                L.latLng(...this.start),
-                L.latLng(...this.end),
-            ]);
-        } else {
-            this.routeControl = L.Routing.control({
-                waypoints: [L.latLng(...this.start), L.latLng(...this.end)],
-                addWaypoints: false,
+        fetch(url)
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP : ${response.status}`);
+                }
+                return response.json();
             })
-                .on("routesfound", (routeEvent) => this.animateRoute(routeEvent))
-                .addTo(this.map);
-        }
+            .then((data) => {
+                if (!data.features || data.features.length === 0) {
+                    throw new Error("Aucun itinéraire trouvé.");
+                }
+                console.log("data : ", data);
+
+
+                const route = data.features[0];
+                this.displayRoute(route.geometry.coordinates);
+                this.animateRoute(route.geometry.coordinates);
+            })
+            .catch((error) => {
+                console.error("Erreur lors de la récupération de l'itinéraire :", error);
+            });
     }
 
-    animateRoute(routeEvent) {
-        const routes = routeEvent.routes[0].coordinates;
+    displayRoute(coordinates) {
+        const latLngs = coordinates.map((coord) => L.latLng(coord[1], coord[0]));
+    
+        // Supprime l'itinéraire précédent, s'il existe
+        if (this.routeLayer) {
+            this.map.removeLayer(this.routeLayer);
+        }
+    
+        // Ajoute l'itinéraire à la carte
+        this.routeLayer = L.polyline(latLngs, { color: "blue" }).addTo(this.map);
+    
+        // Ajuste la vue de la carte pour inclure tout l'itinéraire
+        this.map.fitBounds(this.routeLayer.getBounds());
+    }
+    
+    
+    animateRoute(coordinates) {
+        const cyclistIcon = L.icon({
+            iconUrl: "../../assets/icons/cycling.png", // Icône pour le cycliste
+            iconSize: [40, 40],
+        });
+
+        if (this.cyclistMarker) {
+            this.map.removeLayer(this.cyclistMarker);
+        }
+        this.cyclistMarker = L.marker(this.start, { icon: cyclistIcon }).addTo(this.map);
+        
         let index = 0;
-
         if (this.animation) clearInterval(this.animation);
-
         this.animation = setInterval(() => {
-            if (index < routes.length) {
-                this.originMarker.setLatLng([routes[index].lat, routes[index].lng]);
+            if (index < coordinates.length) {
+                const [lng, lat] = coordinates[index];
+                this.cyclistMarker.setLatLng([lat, lng]);
                 index++;
             } else {
                 clearInterval(this.animation); // Stop animation once route is completed
