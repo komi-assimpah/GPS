@@ -27,8 +27,23 @@ aside {
 
 .search-zone {
   background-color: #21324b;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; 
+  align-items: center;
+  gap: 5vh;
+}
+
+search-bar {
+  width: 85%;
+  padding-right: 4%;
 }
 
 .suggestion-zone{
   background-color: #78B9BA;
+}
+
+input:focus {
+  border-color: #CE472F;
+  box-shadow: 0 0 5px rgba(206, 71, 47, 0.5); 
 }

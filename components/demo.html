@@ -9,8 +9,8 @@
 </head>
 
 <body>
-
-  <!-- <itinerary-suggestion id="suggestion-component" text="Via Chemin de St Claude" distance="9.7 Km" time="49 Min"
+<!--
+  <itinerary-suggestion id="suggestion-component" text="Via Chemin de St Claude" distance="9.7 Km" time="49 Min"
     icons="walker.png, cycling.png, walker.png">
   </itinerary-suggestion>
 
@@ -27,9 +27,12 @@
       // Remplacer le composant suggestion par le composant de détails
       suggestionComponent.replaceWith(detailComponent);
     });
-  </script> -->
+  </script>
+  <script src="/components/itinerary-suggestion/itinerary-suggestion.js" defer></script>
+  <script src="/components/itinerary-details/itinerary-details.js" defer></script>
+-->
 
-
+  
   <div id="itineraries">
     <itinerary-suggestion id="suggestion1" text="Via Chemin de St Claude" distance="9.7 Km" time="49 Min" icons="walker.png,cycling.png,walker.png"></itinerary-suggestion>
     <itinerary-suggestion id="suggestion2" text="deee" distance="zzdkm" icons="cycling.png"></itinerary-suggestion>
@@ -41,9 +44,10 @@
     }
   </style>
   
+  <script src="../scripts/interaction.js" defer></script>
   <script src="/components/itinerary-suggestion/itinerary-suggestion.js" defer></script>
   <script src="/components/itinerary-details/itinerary-details.js" defer></script>
-  <script src="../interaction.js" defer></script>
+
 </body>
 
 </html>
