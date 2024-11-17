@@ -158,13 +158,10 @@ class LeafletMap extends HTMLElement {
                 if (!data.features || data.features.length === 0) {
                     throw new Error("Aucun itinéraire trouvé.");
                 }
-                console.log("data : ", data);
-
+                //console.log("data : ", data);
 
                 const route = data.features[0];
                 console.log("Données de l'itinéraire récupérées :", route);
-                // const steps = route.properties.segments[0].steps; // Récupère les étapes textuelles
-                // console.log("Étapes de l'itinéraire :", steps);
 
                 // Publiez l'itinéraire dans ActiveMQ
                 this.sendItineraryToQueue(route);
@@ -330,25 +327,6 @@ class LeafletMap extends HTMLElement {
             console.log(`Instructions: ${step.instruction}`);
         });
     }
-    
-    
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     
 }
 

@@ -1,3 +1,6 @@
+let currentDetailComponent = null;
+let currentSuggestionComponent = null;
+
 // Références des éléments
 const mapComponent = document.getElementById("mapComponent");
 const departureBar = document.getElementById("departure");
@@ -44,39 +47,46 @@ mapComponent.addEventListener("destination-selected", (event) => {
 });
 
 
+document.addEventListener("DOMContentLoaded", () => {
+    const itineraries = document.getElementById("itineraries");
+    if (!itineraries) {
+      console.error("Element #itineraries not found in the DOM.");
+      return;
+    }
+    
+    itineraries.addEventListener("show-details", (event) => {
+      console.log("nous y est");
+      const { details, id } = event.detail;
+      const suggestionComponent = document.getElementById(id);
+  
+      // Vérifie si un autre détail est déjà affiché
+      if (currentDetailComponent && currentSuggestionComponent) {
+        console.log("Restauration de l'ancien composant");
+        currentDetailComponent.remove();
+        currentSuggestionComponent.classList.remove("hidden");
+        currentSuggestionComponent.style.display = ""; // Réinitialise le style inline si utilisé
+    }
+  
+      // Crée et configure le nouveau composant ItineraryDetails
+      const detailComponent = document.createElement("itinerary-details");
+      detailComponent.updateSteps(details.steps);
+  
+      // Cache le composant ItinerarySuggestion original et insère le composant de détails après
+      suggestionComponent.classList.add("hidden");
+      suggestionComponent.style.display = "none"; // Forcer le masquage si nécessaire
+      suggestionComponent.insertAdjacentElement("afterend", detailComponent);
 
 
+      // Met à jour les références du composant actuel
+      currentDetailComponent = detailComponent;
+      currentSuggestionComponent = suggestionComponent;
+    
+      console.log("Nouveaux composants définis :", {
+        currentDetailComponent,
+        currentSuggestionComponent,
+    });
 
+    });
 
-
-
-
-
-
-
-
-let currentDetailComponent = null;
-let currentSuggestionComponent = null;
-
-document.getElementById("itineraries").addEventListener("show-details", (event) => {
-  const { details, id } = event.detail;
-  const suggestionComponent = document.getElementById(id);
-
-  // Vérifie si un autre détail est déjà affiché
-  if (currentDetailComponent && currentSuggestionComponent) {
-    currentDetailComponent.remove();  // Supprime l'élément `ItineraryDetails` en cours
-    currentSuggestionComponent.classList.remove("hidden");  // Restaure la visibilité du `ItinerarySuggestion`
-  }
-
-  // Crée et configure le nouveau composant ItineraryDetails
-  const detailComponent = document.createElement("itinerary-details");
-  detailComponent.updateSteps(details.steps);
-
-  // Cache le composant ItinerarySuggestion original et insère le composant de détails après
-  suggestionComponent.classList.add("hidden");
-  suggestionComponent.insertAdjacentElement("afterend", detailComponent);
-
-  // Met à jour les références du composant actuel
-  currentDetailComponent = detailComponent;
-  currentSuggestionComponent = suggestionComponent;
-});
+  });
+  

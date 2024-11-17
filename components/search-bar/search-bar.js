@@ -68,6 +68,7 @@ class SearchBar extends HTMLElement {
         }, 500);
     }
 
+    // Fonction pour récupérer les suggestions
     async fetchSuggestions(query) {
         try {
             const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&limit=5`;
