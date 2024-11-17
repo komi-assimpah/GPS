@@ -163,6 +163,8 @@ class LeafletMap extends HTMLElement {
 
                 const route = data.features[0];
                 console.log("Données de l'itinéraire récupérées :", route);
+                // const steps = route.properties.segments[0].steps; // Récupère les étapes textuelles
+                // console.log("Étapes de l'itinéraire :", steps);
 
                 // Publiez l'itinéraire dans ActiveMQ
                 this.sendItineraryToQueue(route);
@@ -300,6 +302,11 @@ class LeafletMap extends HTMLElement {
                     const itinerary = JSON.parse(message.body);
                     console.log('Itinéraire reçu depuis ActiveMQ:', itinerary);
     
+                    const steps = itinerary.properties.segments[0].steps; // Adaptez selon la structure réelle
+                    //console.log('Étapes de l\'itinéraire:', steps);
+                    console.log("Etapes de l'itinéraire:");
+                    this.displaySteps(steps); // Affichez les étapes textuelles
+
                     // Appeler les méthodes de classe avec `this`
                     this.displayRoute(itinerary.geometry.coordinates);
                     this.animateRoute(itinerary.geometry.coordinates);
@@ -313,6 +320,15 @@ class LeafletMap extends HTMLElement {
         };
     
         client.activate();
+    }
+
+    displaySteps(steps) {
+        steps.forEach((step, index) => {
+            console.log(`Étape ${index + 1}:`);
+            console.log(`Distance: ${step.distance} mètres`);
+            console.log(`Durée: ${step.duration} secondes`);
+            console.log(`Instructions: ${step.instruction}`);
+        });
     }
     
     
