@@ -65,15 +65,19 @@ class LeafletMap extends HTMLElement {
         // Abonnez-vous à la queue ActiveMQ
         this.subscribeToQueue();
 
-        // Écoute des clics pour mettre à jour la destination
+        //when an address on the map is clicked destiionnation coordinates are updated
         this.map.on("click", async (event) => {
             const { lat, lng } = event.latlng;
             console.log("click long", lng);
             console.log("click lat", lat);
-            this.setAttribute("end", JSON.stringify([lat, lng])); // Met à jour l'attribut `end`
+
+            this.end = [lat, lng];
+            this.addEndMarker();
+            
+            this.setAttribute("end", JSON.stringify([lat, lng])); 
 
             const address = await this.fetchAddressFromCoordinates(lat, lng);
-            this.setAttribute("end", JSON.stringify(address)); // Met à jour l'attribut `end`
+            this.setAttribute("end", JSON.stringify(address));
 
             // Émettre un événement pour informer la `search-bar` de destination
             this.dispatchEvent(new CustomEvent("destination-selected", {
@@ -136,7 +140,7 @@ class LeafletMap extends HTMLElement {
     }
 
     updateRoute() {
-        if (!this.start && !this.end){
+        if (!this.start || !this.end){
             console.log("erreur");
             return;
         }
@@ -162,6 +166,10 @@ class LeafletMap extends HTMLElement {
 
                 // Publiez l'itinéraire dans ActiveMQ
                 this.sendItineraryToQueue(route);
+
+                if (this.destMarker) {
+                    this.destMarker.addTo(this.map);
+                }
 
                 // this.displayRoute(route.geometry.coordinates);
                 // this.animateRoute(route.geometry.coordinates);
