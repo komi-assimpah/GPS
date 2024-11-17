@@ -62,6 +62,9 @@ class LeafletMap extends HTMLElement {
 
         this.addStartMarker(); // Ajoute le marqueur de départ
 
+        // Abonnez-vous à la queue ActiveMQ
+        this.subscribeToQueue();
+
         // Écoute des clics pour mettre à jour la destination
         this.map.on("click", async (event) => {
             const { lat, lng } = event.latlng;
@@ -155,8 +158,14 @@ class LeafletMap extends HTMLElement {
 
 
                 const route = data.features[0];
-                this.displayRoute(route.geometry.coordinates);
-                this.animateRoute(route.geometry.coordinates);
+                console.log("Données de l'itinéraire récupérées :", route);
+
+                // Publiez l'itinéraire dans ActiveMQ
+                this.sendItineraryToQueue(route);
+
+                // this.displayRoute(route.geometry.coordinates);
+                // this.animateRoute(route.geometry.coordinates);
+
             })
             .catch((error) => {
                 console.error("Erreur lors de la récupération de l'itinéraire :", error);
@@ -164,6 +173,7 @@ class LeafletMap extends HTMLElement {
     }
 
     displayRoute(coordinates) {
+        console.log("displayRoute");
         const latLngs = coordinates.map((coord) => L.latLng(coord[1], coord[0]));
     
         // Supprime l'itinéraire précédent, s'il existe
@@ -177,7 +187,7 @@ class LeafletMap extends HTMLElement {
         // Ajuste la vue de la carte pour inclure tout l'itinéraire
         this.map.fitBounds(this.routeLayer.getBounds());
     }
-    
+
     
     animateRoute(coordinates) {
         const cyclistIcon = L.icon({
@@ -225,6 +235,100 @@ class LeafletMap extends HTMLElement {
             return "Erreur lors de la récupération de l'adresse";
         }
     }
+
+    sendItineraryToQueue(data) {
+        const client = new StompJs.Client({
+            brokerURL: 'ws://localhost:61614',
+            connectHeaders: { login: 'user', passcode: 'password' },
+            debug: function (str) {
+                console.log('[STOMP Debug]', str);
+            },
+            reconnectDelay: 5000,
+        });
+    
+        client.onConnect = function (frame) {
+            //console.log('[STOMP Connected]', frame);
+            console.log('STOMP Connecté à ActiveMQ:');
+            try {
+                client.publish({
+                    destination: '/queue/itinerary',
+                    body: JSON.stringify(data),
+                });
+                console.log('[STOMP Publish] Message envoyé:', data);
+            } catch (error) {
+                console.error('[STOMP Publish Error]', error);
+            }
+        };
+    
+        client.onStompError = function (frame) {
+            console.error('[STOMP Error]', frame.headers['message'], frame.body);
+        };
+    
+        client.activate();
+    }
+    
+
+    subscribeToQueue() {
+        const client = new StompJs.Client({
+            brokerURL: 'ws://localhost:61614',
+            connectHeaders: {
+                login: 'user',
+                passcode: 'password',
+            },
+            debug: function (str) {
+                console.log(str);
+            },
+            reconnectDelay: 5000,
+            heartbeatIncoming: 4000,
+            heartbeatOutgoing: 4000,
+        });
+    
+        // Utilisez une fonction fléchée pour conserver le contexte de `this`
+        client.onConnect = (frame) => {
+            console.log('Connected to ActiveMQ:', frame);
+    
+            client.subscribe('/queue/itinerary', (message) => {
+                if (message.body) {
+                    const itinerary = JSON.parse(message.body);
+                    console.log('Itinéraire reçu depuis ActiveMQ:', itinerary);
+    
+                    // Appeler les méthodes de classe avec `this`
+                    this.displayRoute(itinerary.geometry.coordinates);
+                    this.animateRoute(itinerary.geometry.coordinates);
+                }
+            });
+        };
+    
+        client.onStompError = (frame) => {
+            console.error('Broker error:', frame.headers['message']);
+            console.error('Details:', frame.body);
+        };
+    
+        client.activate();
+    }
+    
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
 }
+
+
+
 
 customElements.define("leaflet-map", LeafletMap);
