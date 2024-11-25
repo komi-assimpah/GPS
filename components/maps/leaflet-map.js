@@ -12,7 +12,7 @@ class LeafletMap extends HTMLElement {
         this.originMarker = null; // Marqueur d'origine unique
         this.destMarker = null; // Marqueur de destination unique
         this.cyclistMarker = null; // Marqueur de cycliste unique
-        this.animationInterval = 30; // Intervalle de mise à jour pour l'animation (en ms)
+        this.animationInterval = 300; // Intervalle de mise à jour pour l'animation (en ms)
 
         this.scriptsLoaded = false; // Ajout d'un indicateur pour vérifier si les scripts sont chargés
     }
@@ -196,7 +196,7 @@ class LeafletMap extends HTMLElement {
     }
 
     
-    animateRoute(coordinates) {
+    /*animateRoute(coordinates) {
         const cyclistIcon = L.icon({
             iconUrl: "../../assets/icons/cycling.png", // Icône pour le cycliste
             iconSize: [40, 40],
@@ -218,7 +218,49 @@ class LeafletMap extends HTMLElement {
                 clearInterval(this.animation); // Stop animation once route is completed
             }
         }, this.animationInterval);
+    }*/
+
+    animateRoute(coordinates, steps) {
+        const cyclistIcon = L.icon({
+            iconUrl: "../../assets/icons/cycling.png", // Icône pour le cycliste
+            iconSize: [40, 40],
+        });
+    
+        // Supprimez l'ancien marqueur, si nécessaire
+        if (this.cyclistMarker) {
+            this.map.removeLayer(this.cyclistMarker);
+        }
+    
+        // Créez un nouveau marqueur pour le cycliste
+        this.cyclistMarker = L.marker(this.start, { icon: cyclistIcon }).addTo(this.map);
+    
+        let index = 0; // Index des coordonnées
+        let stepIndex = 0; // Index des étapes
+    
+        if (this.animation) clearInterval(this.animation);
+    
+        // Animation de l'itinéraire
+        this.animation = setInterval(() => {
+            if (index < coordinates.length) {
+                const [lng, lat] = coordinates[index];
+                this.cyclistMarker.setLatLng([lat, lng]);
+    
+                // Vérifiez si on entre dans une nouvelle étape
+                if (stepIndex < steps.length && index >= steps[stepIndex].way_points[1]) {
+                    console.log(`Étape ${stepIndex + 1}:`);
+                    console.log(`Distance: ${steps[stepIndex].distance} mètres`);
+                    console.log(`Durée: ${steps[stepIndex].duration} secondes`);
+                    console.log(`Instructions: ${steps[stepIndex].instruction}`);
+                    stepIndex++;
+                }
+    
+                index++;
+            } else {
+                clearInterval(this.animation); // Arrête l'animation une fois terminée
+            }
+        }, this.animationInterval);
     }
+        
 
     // Méthode pour obtenir une adresse à partir de coordonnées (latitude, longitude)
     async fetchAddressFromCoordinates(lat, lon) {
@@ -306,7 +348,7 @@ class LeafletMap extends HTMLElement {
 
                     // Appeler les méthodes de classe avec `this`
                     this.displayRoute(itinerary.geometry.coordinates);
-                    this.animateRoute(itinerary.geometry.coordinates);
+                    this.animateRoute(itinerary.geometry.coordinates, steps);
                 }
             });
         };
