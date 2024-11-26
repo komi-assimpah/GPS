@@ -1,1 +1,4 @@
 [Dd]ebug/
+
+# Ignorer les fichiers Visual Studio
+.vs/
