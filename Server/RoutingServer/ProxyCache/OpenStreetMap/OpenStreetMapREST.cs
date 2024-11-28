@@ -61,7 +61,7 @@ namespace ProxyCache.OpenStreetMap
         }
 
 
-        //return the nearest city of the given position
+        //return the adress of the given position
         public static async Task<City> GetNearestCity(Position position)
         {
             string apiUrl = $"{Utils.osmNominatimBaseUrl}/reverse?format=json&lat={DoubleToString(position.Lat)}&lon={DoubleToString(position.Lng)}";

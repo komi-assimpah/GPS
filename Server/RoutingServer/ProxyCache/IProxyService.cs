@@ -15,31 +15,25 @@ namespace ProxyCache
     {
         //===============================JCDecaux================================
         [OperationContract]
-        [WebInvoke(Method = "GET", UriTemplate = "/contracts", ResponseFormat = WebMessageFormat.Json, BodyStyle = WebMessageBodyStyle.Wrapped)]
-        Task<List<Contract>> GetAllContractsAsync();
+        List<Contract> GetAllContracts();
 
         // Lecture des stations d'un contrat donné avec HTTP GET
-        [OperationContract]
-        [WebInvoke(Method = "GET", UriTemplate = "/stations/byContract?contractName={contractName}", ResponseFormat = WebMessageFormat.Json, BodyStyle = WebMessageBodyStyle.Wrapped)]
-        Task<List<Station>> GetAllStationsOfAContractAsync(string contractName);
+/*        [OperationContract]
+        Task<List<Station>> GetAllStationsOfAContract(string contractName);
 
         // Lecture d'une station spécifique d'un contrat donné avec HTTP GET
         [OperationContract]
-        [WebInvoke(Method = "GET", UriTemplate = "/stations/byNumber?stationNumber={stationNumber}&contractName={contractName}", ResponseFormat = WebMessageFormat.Json, BodyStyle = WebMessageBodyStyle.Wrapped)]
-        Task<Station> GetASpecificStationAsync(int stationNumber, string contractName);
+        Task<Station> GetASpecificStation(int stationNumber, string contractName);
 
 
         //================================OpenStreetMap================================
         [OperationContract]
-        [WebInvoke(Method = "GET", UriTemplate = "/resolveAddress?address={address}", ResponseFormat = WebMessageFormat.Json, BodyStyle = WebMessageBodyStyle.Wrapped)]
-        Task<Position> ResolveAddressAsync(string address);
+        Task<Position> ResolveAddress(string address);
         [OperationContract]
-        [WebInvoke(Method = "GET", UriTemplate = "/resolvePosition?position={position}", ResponseFormat = WebMessageFormat.Json, BodyStyle = WebMessageBodyStyle.Wrapped)]
-        Task<City> GetNearestCityAsync(Position position);
+        Task<City> GetNearestCity(Position position);
 
         [OperationContract]
-        [WebInvoke(Method = "GET", UriTemplate = "/itinerary?departPosition={departPosition}&arrivalPosition={arrivalPosition}", ResponseFormat = WebMessageFormat.Json, BodyStyle = WebMessageBodyStyle.Wrapped)]
-        Task<Itinerary> GetItineraryAsync(Position departPosition, Position arrivalPosition);
+        Task<Itinerary> GetItinerary(Position departPosition, Position arrivalPosition)*//*;*/
 
 
     }

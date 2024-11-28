@@ -7,7 +7,6 @@ using System.ServiceModel.Web;
 using System.Text;
 using System.Threading.Tasks;
 using ProxyCache.Models;
-using Contract = RoutingServer.ProxyServiceReference.Contract;
 
 
 namespace RoutingServer
