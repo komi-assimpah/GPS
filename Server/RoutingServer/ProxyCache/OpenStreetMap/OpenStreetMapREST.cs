@@ -1,15 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Net;
 using System.Net.Http;
-using System.Security.Policy;
-using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using ProxyCache.Models;
 
 namespace ProxyCache.OpenStreetMap
@@ -18,23 +12,22 @@ namespace ProxyCache.OpenStreetMap
     {
         static readonly HttpClient client = new HttpClient();
 
-        //returns the position of the given address
         public static async Task<Position> ResolveAddress(string address)
         {
             string escapedAddress = Uri.EscapeDataString(address);
-            string url = $"{Utils.osmNominatimBaseUrl}/search?q=" + escapedAddress + "&format=json";
+            string url = $"{Utils.NominatimOSMBaseUrl}/search?q={escapedAddress}&format=json";
+
             try
             {
-
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("HTTP_Client/1.0 (sagesseadabadji@gmail.com)");
                 HttpResponseMessage response = await client.GetAsync(url);
                 response.EnsureSuccessStatusCode();
                 string responseBody = await response.Content.ReadAsStringAsync();
-                var results = JsonConvert.DeserializeObject<List<dynamic>>(responseBody);
 
+                var results = JsonConvert.DeserializeObject<List<dynamic>>(responseBody);
                 if (results == null || results.Count == 0)
                 {
-                    Console.WriteLine("No results found for the given address.");
+                    Console.WriteLine("\nNo results found for address");
                     return null;
                 }
 
@@ -47,77 +40,82 @@ namespace ProxyCache.OpenStreetMap
                 }
                 else
                 {
-                    Console.WriteLine("Latitude or longitude not found in the result.");
+                    Console.WriteLine("\nLatitude or longitude not found");
                     return null;
                 }
-
             }
             catch (Exception ex)
             {
-                Console.WriteLine("\nException Caught!");
-                Console.WriteLine($"Error resolving address: {ex.Message}");
+                Console.WriteLine($"\nError resolving address\n{ex.Message}");
                 return null;
             }
         }
 
-
-        //return the nearest city of the given position
-        public static async Task<City> GetNearestCity(Position position)
+        public static async Task<Itinerary> GetItinerary(Position startPosition, Position endPosition, string profile = "walking")
         {
-            string apiUrl = $"{Utils.osmNominatimBaseUrl}/reverse?format=json&lat={DoubleToString(position.Lat)}&lon={DoubleToString(position.Lng)}";
+            string url = string.Format(
+                CultureInfo.InvariantCulture,
+                "{0}/{1}/{2},{3};{4},{5}?steps=true&overview=full",
+                Utils.RouterOSRMBaseUrl, profile, startPosition.Lng, startPosition.Lat, endPosition.Lng, endPosition.Lat
+            );
 
-            HttpResponseMessage response = await client.GetAsync(apiUrl);
-
-            if (!response.IsSuccessStatusCode)
+            try
             {
-                Console.WriteLine("Latitude or longitude not found in the result.");
-                return null;
+                HttpResponseMessage response = await client.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+                string responseBody = await response.Content.ReadAsStringAsync();
+
+                var result = JsonConvert.DeserializeObject<dynamic>(responseBody);
+                if (result == null || result.routes.Count == 0)
+                {
+                    Console.WriteLine("\nRoute not found");
+                    return new Itinerary();
+                }
+
+                double distance = (double)result.routes[0].distance;
+                double duration = (double)result.routes[0].duration;
+
+                List<Step> steps = JsonConvert.DeserializeObject<List<Step>>(result.routes[0].legs[0].steps.ToString());
+
+                List<Instruction> instructions = DecodeInstructions(steps);
+
+                Itinerary itinerary = new Itinerary {
+                    Distance = distance, Duration = duration,
+                    Instructions = instructions
+                };
+
+                return itinerary;
             }
-
-            string jsonResult = await response.Content.ReadAsStringAsync();
-            JObject jsonObject = JObject.Parse(jsonResult);
-            string locationCity = jsonObject["address"]["town"]?.ToString() ?? jsonObject["address"]["city"]?.ToString() ?? jsonObject["address"]["district"]?.ToString() ?? jsonObject["address"]["municipality"]?.ToString();
-
-            if (locationCity == null)
+            catch (Exception ex)
             {
-                Console.WriteLine("City not found");
-                return null;
+                Console.WriteLine($"\nError computing itinerary\n{ex.Message}");
+                return new Itinerary();
             }
-            return new City { Name = locationCity?.Split(' ')[0].ToLower() };
         }
 
-
-        //get itineraries between two positions
-        //const url = `https://api.openrouteservice.org/v2/directions/cycling-regular?api_key=${apiKey}&start=${this.start[1]},${this.start[0]}&end=${this.end[1]},${this.end[0]}`;
-        public static async Task<Itinerary> GetItinerary(Position start, Position end)
+        private static List<Instruction> DecodeInstructions(List<Step> steps)
         {
-            string url = $"{Utils.orsBaseUrlCycling}?api_key={Utils.orsAPIKey}&start={start.Lat},{start.Lng}&end={end.Lat},{end.Lng}";
-            HttpResponseMessage response = await client.GetAsync(url);
-            if (!response.IsSuccessStatusCode)
+            List<Instruction> instructions = new List<Instruction>();
+            foreach (var step in steps)
             {
-                Console.WriteLine("Error getting itinerary");
-                return null;
+                string move = (string)step.Maneuver.Type + " " + (string)step.Maneuver.Modifier;
+                string name = (string)step.Name;
+                string distance = ((double)step.Distance).ToString();
+
+                string instruction = move + (name != "" || name == null ? " on " : "") + name + " for " + distance + " meters";
+
+                Position position = new Position
+                {
+                    Lat = step.Intersections[0].Location[1],
+                    Lng = step.Intersections[0].Location[0]
+                };
+
+                instructions.Add(
+                    new Instruction { Text = instruction, Position = position }
+                );
             }
-            string jsonResult = await response.Content.ReadAsStringAsync();
 
-            //TO TEST IS BUGGY
-            Console.WriteLine(jsonResult);
-
-
-            Itinerary itinerary = JsonConvert.DeserializeObject<Itinerary>(jsonResult);
-            return itinerary;
-        }
-
-
-
- 
-
-
-
-
-        private static string DoubleToString(double coordinate)
-        {
-            return coordinate.ToString(CultureInfo.InvariantCulture);
+            return instructions;
         }
     }
 }

@@ -9,10 +9,10 @@
   <xs:element name="ArrayOfContract" nillable="true" type="tns:ArrayOfContract" />
   <xs:complexType name="Contract">
     <xs:sequence>
-      <xs:element xmlns:q1="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="Cities" nillable="true" type="q1:ArrayOfstring" />
-      <xs:element minOccurs="0" name="Name" nillable="true" type="xs:string" />
+      <xs:element xmlns:q1="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="cities" nillable="true" type="q1:ArrayOfstring" />
       <xs:element minOccurs="0" name="commercial_name" nillable="true" type="xs:string" />
       <xs:element minOccurs="0" name="country_code" nillable="true" type="xs:string" />
+      <xs:element minOccurs="0" name="name" nillable="true" type="xs:string" />
     </xs:sequence>
   </xs:complexType>
   <xs:element name="Contract" nillable="true" type="tns:Contract" />
@@ -24,77 +24,47 @@
   <xs:element name="ArrayOfStation" nillable="true" type="tns:ArrayOfStation" />
   <xs:complexType name="Station">
     <xs:sequence>
-      <xs:element minOccurs="0" name="Address" nillable="true" type="xs:string" />
-      <xs:element minOccurs="0" name="Banking" type="xs:boolean" />
-      <xs:element minOccurs="0" name="Bonus" type="xs:boolean" />
-      <xs:element minOccurs="0" name="Name" nillable="true" type="xs:string" />
-      <xs:element minOccurs="0" name="Number" type="xs:int" />
-      <xs:element minOccurs="0" name="Position" nillable="true" type="tns:Position" />
-      <xs:element minOccurs="0" name="Status" nillable="true" type="xs:string" />
+      <xs:element minOccurs="0" name="address" nillable="true" type="xs:string" />
       <xs:element minOccurs="0" name="available_bike_stands" type="xs:int" />
       <xs:element minOccurs="0" name="available_bikes" type="xs:int" />
+      <xs:element minOccurs="0" name="banking" type="xs:boolean" />
       <xs:element minOccurs="0" name="bike_stands" type="xs:int" />
+      <xs:element minOccurs="0" name="bonus" type="xs:boolean" />
       <xs:element minOccurs="0" name="contract_name" nillable="true" type="xs:string" />
       <xs:element minOccurs="0" name="last_update" type="xs:long" />
+      <xs:element minOccurs="0" name="name" nillable="true" type="xs:string" />
+      <xs:element minOccurs="0" name="number" type="xs:int" />
+      <xs:element minOccurs="0" name="position" nillable="true" type="tns:Position" />
+      <xs:element minOccurs="0" name="status" nillable="true" type="xs:string" />
     </xs:sequence>
   </xs:complexType>
   <xs:element name="Station" nillable="true" type="tns:Station" />
   <xs:complexType name="Position">
     <xs:sequence>
-      <xs:element minOccurs="0" name="Lat" type="xs:double" />
-      <xs:element minOccurs="0" name="Lng" type="xs:double" />
+      <xs:element minOccurs="0" name="lat" type="xs:double" />
+      <xs:element minOccurs="0" name="lng" type="xs:double" />
     </xs:sequence>
   </xs:complexType>
   <xs:element name="Position" nillable="true" type="tns:Position" />
-  <xs:complexType name="City">
-    <xs:sequence>
-      <xs:element minOccurs="0" name="Name" nillable="true" type="xs:string" />
-    </xs:sequence>
-  </xs:complexType>
-  <xs:element name="City" nillable="true" type="tns:City" />
   <xs:complexType name="Itinerary">
     <xs:sequence>
-      <xs:element minOccurs="0" name="Geometry" nillable="true" type="xs:string" />
-      <xs:element minOccurs="0" name="Segments" nillable="true" type="tns:ArrayOfSegment" />
-      <xs:element minOccurs="0" name="Summary" nillable="true" type="tns:ItinerarySummary" />
+      <xs:element minOccurs="0" name="distance" type="xs:double" />
+      <xs:element minOccurs="0" name="duration" type="xs:double" />
+      <xs:element minOccurs="0" name="instructions" nillable="true" type="tns:ArrayOfInstruction" />
     </xs:sequence>
   </xs:complexType>
   <xs:element name="Itinerary" nillable="true" type="tns:Itinerary" />
-  <xs:complexType name="ArrayOfSegment">
+  <xs:complexType name="ArrayOfInstruction">
     <xs:sequence>
-      <xs:element minOccurs="0" maxOccurs="unbounded" name="Segment" nillable="true" type="tns:Segment" />
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="Instruction" nillable="true" type="tns:Instruction" />
     </xs:sequence>
   </xs:complexType>
-  <xs:element name="ArrayOfSegment" nillable="true" type="tns:ArrayOfSegment" />
-  <xs:complexType name="Segment">
+  <xs:element name="ArrayOfInstruction" nillable="true" type="tns:ArrayOfInstruction" />
+  <xs:complexType name="Instruction">
     <xs:sequence>
-      <xs:element minOccurs="0" name="Distance" type="xs:double" />
-      <xs:element minOccurs="0" name="Duration" type="xs:double" />
-      <xs:element minOccurs="0" name="Steps" nillable="true" type="tns:ArrayOfStep" />
+      <xs:element minOccurs="0" name="position" nillable="true" type="tns:Position" />
+      <xs:element minOccurs="0" name="text" nillable="true" type="xs:string" />
     </xs:sequence>
   </xs:complexType>
-  <xs:element name="Segment" nillable="true" type="tns:Segment" />
-  <xs:complexType name="ArrayOfStep">
-    <xs:sequence>
-      <xs:element minOccurs="0" maxOccurs="unbounded" name="Step" nillable="true" type="tns:Step" />
-    </xs:sequence>
-  </xs:complexType>
-  <xs:element name="ArrayOfStep" nillable="true" type="tns:ArrayOfStep" />
-  <xs:complexType name="Step">
-    <xs:sequence>
-      <xs:element minOccurs="0" name="Distance" type="xs:double" />
-      <xs:element minOccurs="0" name="Duration" type="xs:double" />
-      <xs:element xmlns:q2="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="EndLocation" nillable="true" type="q2:ArrayOfdouble" />
-      <xs:element minOccurs="0" name="Instruction" nillable="true" type="xs:string" />
-      <xs:element xmlns:q3="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="StartLocation" nillable="true" type="q3:ArrayOfdouble" />
-    </xs:sequence>
-  </xs:complexType>
-  <xs:element name="Step" nillable="true" type="tns:Step" />
-  <xs:complexType name="ItinerarySummary">
-    <xs:sequence>
-      <xs:element minOccurs="0" name="Distance" type="xs:double" />
-      <xs:element minOccurs="0" name="Duration" type="xs:double" />
-    </xs:sequence>
-  </xs:complexType>
-  <xs:element name="ItinerarySummary" nillable="true" type="tns:ItinerarySummary" />
+  <xs:element name="Instruction" nillable="true" type="tns:Instruction" />
 </xs:schema>

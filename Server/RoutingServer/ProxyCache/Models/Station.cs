@@ -1,34 +1,29 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Runtime.Serialization;
 
 namespace ProxyCache.Models
 {
     [DataContract]
     public class Station
     {
-        [DataMember]
+        [DataMember(Name = "number")]
         public int Number { get; set; }
 
         [DataMember(Name = "contract_name")]
         public string ContractName { get; set; }
 
-        [DataMember]
+        [DataMember(Name = "name")]
         public string Name { get; set; }
 
-        [DataMember]
+        [DataMember(Name = "address")]
         public string Address { get; set; }
 
-        [DataMember]
+        [DataMember(Name = "position")]
         public Position Position { get; set; }
 
-        [DataMember]
+        [DataMember(Name = "banking")]
         public bool Banking { get; set; }
 
-        [DataMember]
+        [DataMember(Name = "bonus")]
         public bool Bonus { get; set; }
 
         [DataMember(Name = "bike_stands")]
@@ -40,7 +35,7 @@ namespace ProxyCache.Models
         [DataMember(Name = "available_bikes")]
         public int AvailableBikes { get; set; }
 
-        [DataMember]
+        [DataMember(Name = "status")]
         public string Status { get; set; }
 
         [DataMember(Name = "last_update")]

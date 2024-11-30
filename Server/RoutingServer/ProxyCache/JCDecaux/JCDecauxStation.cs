@@ -1,26 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using ProxyCache.GenericProxyCache;
 using ProxyCache.Models;
-using static System.Collections.Specialized.BitVector32;
 
 namespace ProxyCache.JCDecaux
 {
-    internal class JCDecauxStation
+    internal class JCDecauxStation : ICacheable
     {
         public List<Station> Stations { get; set; }
-        public string ContractName { get; set; }
-        public JCDecauxStation(string contractName)
-        {
-            ContractName = contractName;
-            FillStations().Wait();
-        }
-        private async Task FillStations()
+        public JCDecauxStation() {}
+        void ICacheable.Fill(object obj)
         {
             var jcDecauxRest = new JCDecauxREST();
-            Stations = await jcDecauxRest.GetAllStationsOfAContractAsync(ContractName);
+            string contractName = (string)obj;
+            Stations = jcDecauxRest.GetContractStations(contractName).Result;
         }
     }
 

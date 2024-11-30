@@ -1,13 +1,7 @@
-﻿using System;
+﻿using ProxyCache.Models;
 using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
 using System.ServiceModel;
 using System.ServiceModel.Web;
-using System.Text;
-using System.Threading.Tasks;
-using ProxyCache.Models;
-using Contract = RoutingServer.ProxyServiceReference.Contract;
 
 
 namespace RoutingServer
@@ -16,11 +10,7 @@ namespace RoutingServer
     public interface IRoutingService
     {
         [OperationContract]
-        [WebInvoke(Method = "GET", UriTemplate = "/contracts", ResponseFormat = WebMessageFormat.Json, BodyStyle = WebMessageBodyStyle.Wrapped)]
-        Task<List<Contract>> GetContractsFromProxy();
-
-
-
+        [WebInvoke(Method = "GET", UriTemplate = "/itinerary?", ResponseFormat = WebMessageFormat.Json, BodyStyle = WebMessageBodyStyle.Wrapped)]
+        Dictionary<string, Itinerary> suggestJourney(string startAddress, string endAddress);
     }
-
 }

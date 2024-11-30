@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace ProxyCache.Models
 {
     [DataContract]
-    public class City
+    public class Address
     {
         [DataMember]
         public string Name { get; set; }

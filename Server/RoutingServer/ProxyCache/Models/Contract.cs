@@ -1,22 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Runtime.Serialization;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ProxyCache.Models
 {
     [DataContract]
     public class Contract
     {
-        [DataMember]
+        [DataMember(Name = "name")]
         public string Name { get; set; }
 
         [DataMember(Name = "commercial_name")]
         public string CommercialName { get; set; }
 
-        [DataMember]
+        [DataMember(Name = "cities")]
         public List<string> Cities { get; set; }
 
         [DataMember(Name = "country_code")]
