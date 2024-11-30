@@ -79,8 +79,10 @@ namespace ProxyCache.OpenStreetMap
 
                 List<Instruction> instructions = DecodeInstructions(steps);
 
-                Itinerary itinerary = new Itinerary {
-                    Distance = distance, Duration = duration,
+                Itinerary itinerary = new Itinerary
+                {
+                    Distance = distance,
+                    Duration = duration,
                     Instructions = instructions
                 };
 

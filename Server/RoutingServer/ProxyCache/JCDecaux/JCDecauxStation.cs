@@ -7,7 +7,7 @@ namespace ProxyCache.JCDecaux
     internal class JCDecauxStation : ICacheable
     {
         public List<Station> Stations { get; set; }
-        public JCDecauxStation() {}
+        public JCDecauxStation() { }
         void ICacheable.Fill(object obj)
         {
             var jcDecauxRest = new JCDecauxREST();

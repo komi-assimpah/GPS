@@ -35,7 +35,8 @@ namespace ProxyCache.JCDecaux
         {
             string url = $"{Utils.JCDecauxBaseURL}/stations?contract={contractName}&apiKey={Utils.JCDecauxAPIKey}";
 
-            try {
+            try
+            {
                 HttpResponseMessage response = await client.GetAsync(url);
                 response.EnsureSuccessStatusCode();
                 string responseBody = await response.Content.ReadAsStringAsync();

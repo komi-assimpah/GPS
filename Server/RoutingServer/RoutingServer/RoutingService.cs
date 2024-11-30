@@ -220,7 +220,6 @@ namespace RoutingServer
             return (closest, closestAvailable, (minDistance, minAvailableDistance));
         }
 
-
     }
 
 }
