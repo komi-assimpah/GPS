@@ -10,7 +10,7 @@ namespace RoutingServer
     public interface IRoutingService
     {
         [OperationContract]
-        [WebInvoke(Method = "GET", UriTemplate = "/itinerary?", ResponseFormat = WebMessageFormat.Json, BodyStyle = WebMessageBodyStyle.Wrapped)]
+        [WebGet(UriTemplate = "/suggestJourney?startAddress={startAddress}&endAddress={endAddress}")]
         Dictionary<string, Itinerary> suggestJourney(string startAddress, string endAddress);
     }
 }
