@@ -20,6 +20,12 @@ namespace RoutingServer.ProxyServiceReference {
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IProxyService/GetAllContracts", ReplyAction="http://tempuri.org/IProxyService/GetAllContractsResponse")]
         System.Threading.Tasks.Task<ProxyCache.Models.Contract[]> GetAllContractsAsync();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IProxyService/GetAllStationsOfAContract", ReplyAction="http://tempuri.org/IProxyService/GetAllStationsOfAContractResponse")]
+        ProxyCache.Models.Station[] GetAllStationsOfAContract(string contractName);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IProxyService/GetAllStationsOfAContract", ReplyAction="http://tempuri.org/IProxyService/GetAllStationsOfAContractResponse")]
+        System.Threading.Tasks.Task<ProxyCache.Models.Station[]> GetAllStationsOfAContractAsync(string contractName);
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
@@ -55,6 +61,14 @@ namespace RoutingServer.ProxyServiceReference {
         
         public System.Threading.Tasks.Task<ProxyCache.Models.Contract[]> GetAllContractsAsync() {
             return base.Channel.GetAllContractsAsync();
+        }
+        
+        public ProxyCache.Models.Station[] GetAllStationsOfAContract(string contractName) {
+            return base.Channel.GetAllStationsOfAContract(contractName);
+        }
+        
+        public System.Threading.Tasks.Task<ProxyCache.Models.Station[]> GetAllStationsOfAContractAsync(string contractName) {
+            return base.Channel.GetAllStationsOfAContractAsync(contractName);
         }
     }
 }

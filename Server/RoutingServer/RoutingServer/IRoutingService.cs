@@ -18,6 +18,9 @@ namespace RoutingServer
         [WebInvoke(Method = "GET", UriTemplate = "/contracts", ResponseFormat = WebMessageFormat.Json, BodyStyle = WebMessageBodyStyle.Wrapped)]
         Task<List<Contract>> GetContractsFromProxy();
 
+        [OperationContract]
+        [WebInvoke(Method = "GET", UriTemplate = "/stations?contract={contractName}", ResponseFormat = WebMessageFormat.Json, BodyStyle = WebMessageBodyStyle.Wrapped)]
+        Task<List<Station>> GetStationsFromProxy(string contractName);
 
 
     }

@@ -14,16 +14,35 @@
   <wsdl:message name="IProxyService_GetAllContracts_OutputMessage">
     <wsdl:part name="parameters" element="tns:GetAllContractsResponse" />
   </wsdl:message>
+  <wsdl:message name="IProxyService_GetAllStationsOfAContract_InputMessage">
+    <wsdl:part name="parameters" element="tns:GetAllStationsOfAContract" />
+  </wsdl:message>
+  <wsdl:message name="IProxyService_GetAllStationsOfAContract_OutputMessage">
+    <wsdl:part name="parameters" element="tns:GetAllStationsOfAContractResponse" />
+  </wsdl:message>
   <wsdl:portType name="IProxyService">
     <wsdl:operation name="GetAllContracts">
       <wsdl:input wsaw:Action="http://tempuri.org/IProxyService/GetAllContracts" message="tns:IProxyService_GetAllContracts_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IProxyService/GetAllContractsResponse" message="tns:IProxyService_GetAllContracts_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="GetAllStationsOfAContract">
+      <wsdl:input wsaw:Action="http://tempuri.org/IProxyService/GetAllStationsOfAContract" message="tns:IProxyService_GetAllStationsOfAContract_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IProxyService/GetAllStationsOfAContractResponse" message="tns:IProxyService_GetAllStationsOfAContract_OutputMessage" />
     </wsdl:operation>
   </wsdl:portType>
   <wsdl:binding name="BasicHttpBinding_IProxyService" type="tns:IProxyService">
     <soap:binding transport="http://schemas.xmlsoap.org/soap/http" />
     <wsdl:operation name="GetAllContracts">
       <soap:operation soapAction="http://tempuri.org/IProxyService/GetAllContracts" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetAllStationsOfAContract">
+      <soap:operation soapAction="http://tempuri.org/IProxyService/GetAllStationsOfAContract" style="document" />
       <wsdl:input>
         <soap:body use="literal" />
       </wsdl:input>

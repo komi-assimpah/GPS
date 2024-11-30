@@ -8,83 +8,102 @@ using Newtonsoft.Json;
 
 namespace ProxyCache.Models
 {
-    [DataContract]
-    public class Itinerary
-    {
-        // Résumé général de l'itinéraire
-        [DataMember]
-        [JsonProperty("summary")]
-        public ItinerarySummary Summary { get; set; }
-
-        // Liste des segments (chaque segment contient des étapes ou des détails spécifiques)
-        [DataMember]
-        [JsonProperty("segments")]
-        public List<Segment> Segments { get; set; }
-
-        // Géométrie (chemin) de l'itinéraire, souvent encodée sous forme de polyline
-        [DataMember]
-        [JsonProperty("geometry")]
-        public string Geometry { get; set; }
-    }
-
-    [DataContract]
-    public class ItinerarySummary
-    {
-        // Distance totale de l'itinéraire en mètres
-        [DataMember]
-        [JsonProperty("distance")]
-        public double Distance { get; set; }
-
-        // Durée totale de l'itinéraire en secondes
-        [JsonProperty("duration")]
-        [DataMember]
-        public double Duration { get; set; }
-    }
-
-
-    [DataContract]
-    public class Segment
-    {
-        [DataMember]
-        [JsonProperty("distance")]
-        public double Distance { get; set; }
-
-        [DataMember]
-        [JsonProperty("duration")]
-        public double Duration { get; set; }
-
-        // Liste des étapes dans ce segment
-        [DataMember]
-        [JsonProperty("steps")]
-        public List<Step> Steps { get; set; }
-    }
 
     [DataContract]
     public class Step
     {
-        // Distance de l'étape en mètres
+        [DataMember]
+        [JsonProperty("geometry")]
+        public string Geometry { get; set; }
+
+        [DataMember]
+        [JsonProperty("maneuver")]
+        public Maneuver Maneuver { get; set; }
+
+        [DataMember]
+        [JsonProperty("mode")]
+        public string Mode { get; set; }
+
+        [DataMember]
+        [JsonProperty("driving_side")]
+        public string DrivingSide { get; set; }
+
+        [DataMember]
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [DataMember]
+        [JsonProperty("intersections")]
+        public List<Intersection> Intersections { get; set; }
+
+        [DataMember]
+        [JsonProperty("weight")]
+        public double Weight { get; set; }
+
         [DataMember]
         [JsonProperty("distance")]
         public double Distance { get; set; }
 
-        // Durée de l'étape en secondes
         [DataMember]
         [JsonProperty("duration")]
         public double Duration { get; set; }
-
-        // Direction ou instruction textuelle pour cette étape
-        [DataMember]
-        [JsonProperty("instruction")]
-        public string Instruction { get; set; }
-
-        [DataMember]
-        [JsonProperty("start_location")]
-        public List<double> StartLocation { get; set; } // [longitude, latitude]
-
-        [DataMember]
-        [JsonProperty("end_location")]
-        public List<double> EndLocation { get; set; } // [longitude, latitude]
     }
+
+
+    [DataContract]
+    public class Maneuver
+    {
+        [DataMember]
+        [JsonProperty("Exit")]
+        public int Exit { get; set; }
+
+        [DataMember]
+        [JsonProperty("Bearing_after")]
+        public int Bearing_after { get; set; }
+
+        [DataMember]
+        [JsonProperty("Bearing_before")]
+        public int Bearing_before { get; set; }
+
+        [DataMember]
+        [JsonProperty("Location")]
+        public List<double> Location { get; set; }
+
+        [DataMember]
+        [JsonProperty("Modifier")]
+        public string Modifier { get; set; }
+
+        [DataMember]
+        [JsonProperty("Type")]
+        public string Type { get; set; }
+    }
+
+    [DataContract]
+    public class Intersection
+    {
+
+        [DataMember]
+        [JsonProperty("out")]
+        public int Out { get; set; }
+
+        [DataMember]
+        [JsonProperty("in")]
+        public int In { get; set; }
+
+        [DataMember]
+        [JsonProperty("entry")]
+        public List<bool> Entry { get; set; }
+
+        [DataMember]
+        [JsonProperty("bearings")]
+        public List<int> Bearings { get; set; }
+
+        [DataMember]
+        [JsonProperty("location")]
+        public List<double> Location { get; set; }
+
+    }
+
 }
 
 

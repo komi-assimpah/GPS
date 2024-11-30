@@ -19,7 +19,7 @@ namespace ProxyCache.OpenStreetMap
         static readonly HttpClient client = new HttpClient();
 
         //returns the position of the given address
-        public static async Task<Position> ResolveAddress(string address)
+        public static Position ResolveAddress(string address)
         {
             string escapedAddress = Uri.EscapeDataString(address);
             string url = $"{Utils.osmNominatimBaseUrl}/search?q=" + escapedAddress + "&format=json";
@@ -27,9 +27,9 @@ namespace ProxyCache.OpenStreetMap
             {
 
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("HTTP_Client/1.0 (sagesseadabadji@gmail.com)");
-                HttpResponseMessage response = await client.GetAsync(url);
+                HttpResponseMessage response = client.GetAsync(url).Result;
                 response.EnsureSuccessStatusCode();
-                string responseBody = await response.Content.ReadAsStringAsync();
+                string responseBody = response.Content.ReadAsStringAsync().Result;
                 var results = JsonConvert.DeserializeObject<List<dynamic>>(responseBody);
 
                 if (results == null || results.Count == 0)
@@ -61,8 +61,8 @@ namespace ProxyCache.OpenStreetMap
         }
 
 
-        //return the adress of the given position
-        public static async Task<City> GetNearestCity(Position position)
+        /*//return the adress of the given position
+        public static async Task<Address> GetNearestCity(Position position)
         {
             string apiUrl = $"{Utils.osmNominatimBaseUrl}/reverse?format=json&lat={DoubleToString(position.Lat)}&lon={DoubleToString(position.Lng)}";
 
@@ -83,7 +83,7 @@ namespace ProxyCache.OpenStreetMap
                 Console.WriteLine("City not found");
                 return null;
             }
-            return new City { Name = locationCity?.Split(' ')[0].ToLower() };
+            return new Address { Name = locationCity?.Split(' ')[0].ToLower() };
         }
 
 
@@ -106,18 +106,69 @@ namespace ProxyCache.OpenStreetMap
 
             Itinerary itinerary = JsonConvert.DeserializeObject<Itinerary>(jsonResult);
             return itinerary;
+        }*/
+
+        /*private (double Distance, double Duration, List<(string, Position)> Instructions) GetItineraryWithSteps(Position startPosition, Position endPosition, string profile = "walking")
+        {
+            string url = string.Format(
+                CultureInfo.InvariantCulture,
+                "https://router.project-osrm.org/route/v1/{0}/{1},{2};{3},{4}?steps=true&overview=full",
+                profile, startPosition.Lng, startPosition.Lat, endPosition.Lng, endPosition.Lat
+            );
+
+            try
+            {
+                HttpResponseMessage response = client.GetAsync(url).Result;
+                response.EnsureSuccessStatusCode();
+                string responseBody =response.Content.ReadAsStringAsync().Result;
+
+                var result = JsonConvert.DeserializeObject<dynamic>(responseBody);
+                if (result == null || result.routes.Count == 0)
+                {
+                    Console.WriteLine("\nRoute not found");
+                    return (0, 0, new List<(string, Position)>());
+                }
+
+                double distance = (double)result.routes[0].distance;
+                double duration = (double)result.routes[0].duration;
+
+                List<Step> steps = JsonConvert.DeserializeObject<List<Step>>(result.routes[0].legs[0].steps.ToString());
+
+                List<(string, Position)> instructions = DecodeInstructions(steps);
+
+                return (distance, duration, instructions);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"\nError computing itinerary\n{ex.Message}");
+                return (0, 0, new List<(string, Position)>());
+            }
         }
 
+        private List<(string, Position)> DecodeInstructions(List<Step> steps)
+        {
+            List<(string, Position)> instructions = new List<(string, Position)>();
+            foreach (var step in steps)
+            {
+                string instruction = (string)step.Maneuver.Type + " " + (string)step.Maneuver.Modifier;
+                string name = (string)step.Name;
+                string distance = ((double)step.Distance).ToString();
 
+                Position position = new Position
+                {
+                    Lat = step.Intersections[0].Location[1],
+                    Lng = step.Intersections[0].Location[0]
+                };
 
- 
+                instructions.Add((instruction + (name != "" || name == null ? " on " : "") + name + " for " + distance + " meters", position));
+            }
 
-
-
+            return instructions;
+        }
 
         private static string DoubleToString(double coordinate)
         {
             return coordinate.ToString(CultureInfo.InvariantCulture);
-        }
+        }*/
     }
 }

@@ -33,69 +33,38 @@ namespace ProxyCache.JCDecaux
             return new List<Contract>(); // Return an empty list in case of an exception
         }
 
-        public async Task<List<Station>> GetAllStationsOfAContractAsync(string contractName)
+
+
+        //la limit maximal de contenu est 129
+        // a defaut de ne pas pouvoir recupérer toutes les stations,
+        // on pourrais ne necupéré que ceux qui nous intéresse par exp ceux où available_bikes > 0
+        public async Task<List<Station>> GetAllStationsOfAContractAsync(string contractName, int offset = 0, int limit = 129)
         {
-            string url = $"{Utils.jcdAPIBaseURL}/stations?contract={contractName}";
+            string url = $"{Utils.jcdAPIBaseURL}/stations?contract={contractName}&apiKey={Utils.jcdecauxAPIKey}";
+
+
+            HttpResponseMessage response = await client.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+            string responseBody = await response.Content.ReadAsStringAsync();
+
+            List<Station> allStations = JsonConvert.DeserializeObject<List<Station>>(responseBody);
+
+            // Appliquer la limitation et l'offset côté client
+            return allStations.Skip(offset).Take(limit).ToList();
+        }
+
+        //fonctionne mais parceque la limite n'est pas fixé, le server n'arrives pas à gérer les resultats et envoie donc une érreur
+        /*public async Task<List<Station>> GetAllStationsOfAContractAsync(string contractName)
+        {
+            string url = $"{Utils.jcdAPIBaseURL}/stations?contract={contractName}&apiKey={Utils.jcdecauxAPIKey}";
+
+
             HttpResponseMessage response = await client.GetAsync(url);
             response.EnsureSuccessStatusCode();
             string responseBody = await response.Content.ReadAsStringAsync();
             List<Station> stations = JsonConvert.DeserializeObject<List<Station>>(responseBody);
             return stations;
-        }
-
-
-        public async Task<Station> GetASpecificStationAsync(int stationNumber, string contractName)
-        {
-            //string url = $"{Utils.jcdAPIBaseURL}/stations/{stationNumber}?contract={contractName}&apiKey={Utils.jcdecauxAPIKey}";
-            //HttpResponseMessage response = await client.GetAsync(url);
-            //response.EnsureSuccessStatusCode();
-            //string responseBody = await response.Content.ReadAsStringAsync();
-            //Station station = JsonConvert.DeserializeObject<Station>(responseBody);
-            //return station;
-
-
-            List<Station> stations = await GetAllStationsOfAContractAsync(contractName);
-            foreach (Station station in stations)
-            {
-                if (station.Number == stationNumber)
-                {
-                    return station;
-                }
-            }
-            return null;
-        }
-
-        //could be optimized and maybe moved to the ProxyService
-        public async Task<Station> GetClosestStationAsync(int stationNumber, string contractName)
-        {
-
-            double minDistance = double.MaxValue;
-            Station choosenStation = await GetASpecificStationAsync(stationNumber, contractName);
-            Station closestStation = null;
-
-            List<Contract> contracts = await GetAllContractsAsync();
-            foreach (Contract contract in contracts)
-            {
-                List<Station> stations = await GetAllStationsOfAContractAsync(contract.Name);
-
-                foreach (Station station in stations)
-                {
-                    double distance = Math.Sqrt(
-                        Math.Pow(station.Position.Lat - choosenStation.Position.Lat, 2)
-                        + Math.Pow(station.Position.Lng - choosenStation.Position.Lng, 2));
-                    if (distance < minDistance && distance != 0)
-                    {
-                        minDistance = distance;
-                        closestStation = station;
-                    }
-                }
-            }
-
-            return closestStation;
-        }
-
-
-
+        }*/
 
     }
 

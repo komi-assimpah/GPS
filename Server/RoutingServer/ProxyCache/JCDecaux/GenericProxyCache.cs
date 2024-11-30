@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Caching;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ProxyCache.JCDecaux
 {
-    internal class GenericProxyCache<T>
+    internal class GenericProxyCache<T> where T : new()
     {
         private static readonly ObjectCache _cache = MemoryCache.Default;
         private static readonly CacheItemPolicy _defaultCachePolicy = new CacheItemPolicy { AbsoluteExpiration = ObjectCache.InfiniteAbsoluteExpiration };
@@ -37,12 +33,23 @@ namespace ProxyCache.JCDecaux
             var cacheItem = _cache.Get(cacheItemName);
             if (cacheItem == null)
             {
-                var newItem = Activator.CreateInstance<T>();
+                var newItem = CreateInstance();
                 _cache.Add(cacheItemName, newItem, cachePolicy);
                 return newItem;
             }
             return (T)cacheItem;
         }
-    }
 
+        private T CreateInstance()
+        {
+            try
+            {
+                return new T();
+            }
+            catch (MissingMethodException)
+            {
+                throw new InvalidOperationException($"The type {typeof(T).Name} must have a parameterless constructor.");
+            }
+        }
+    }
 }
