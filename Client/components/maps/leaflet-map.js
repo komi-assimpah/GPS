@@ -190,8 +190,16 @@ class LeafletMap extends HTMLElement {
             });
     }
 
-    displayRoute(coordinates) {
-        console.log("displayRoute");
+    displayRoute(coordinates, type) {
+        console.log(`[displayRoute] Drawing route of type '${type}'`);
+    
+        let colorOfItinerary = "blue"; // Couleur par défaut pour le vélo
+        if (type === "walking") {
+            colorOfItinerary = "red"; // Rouge pour la marche
+        }
+
+        // console.log("colorOfItinerary confirm:", colorOfItinerary);
+
         const latLngs = coordinates.map((coord) => L.latLng(coord[0], coord[1]));
     
         // Supprime l'itinéraire précédent, s'il existe
@@ -200,7 +208,7 @@ class LeafletMap extends HTMLElement {
         }
     
         // Ajoute l'itinéraire à la carte
-        this.routeLayer = L.polyline(latLngs, { color: "blue" }).addTo(this.map);
+        this.routeLayer = L.polyline(latLngs, { color: colorOfItinerary }).addTo(this.map);
     
         // Ajuste la vue de la carte pour inclure tout l'itinéraire
         this.map.fitBounds(this.routeLayer.getBounds());
@@ -272,7 +280,7 @@ class LeafletMap extends HTMLElement {
         }
     }
 
-    sendItineraryToQueue(data) {
+    /*sendItineraryToQueue(data) {
         const client = new StompJs.Client({
             brokerURL: 'ws://localhost:61614',
             connectHeaders: { login: 'user', passcode: 'password' },
@@ -301,7 +309,7 @@ class LeafletMap extends HTMLElement {
         };
     
         client.activate();
-    }
+    }*/
     
 
     subscribeToQueue() {
@@ -339,7 +347,7 @@ class LeafletMap extends HTMLElement {
 
                                 // Vérifiez si l'itinéraire contient des instructions valides
                                 if (itinerary.instructions && itinerary.instructions.length > 0) {
-                                    this.handleReceivedItinerary(itinerary);
+                                    this.handleReceivedItinerary(itinerary, key);
                                 } else {
                                     console.warn(`[Itinerary] No valid instructions found for '${key}'.`);
                                 }
@@ -358,7 +366,7 @@ class LeafletMap extends HTMLElement {
         client.activate();
     }
 
-    handleReceivedItinerary(itinerary) {
+    handleReceivedItinerary(itinerary, type) {
         if (!itinerary || !itinerary.instructions || itinerary.instructions.length === 0) {
             console.warn('[Itinerary] No steps found in the received itinerary.');
             return;
@@ -373,7 +381,7 @@ class LeafletMap extends HTMLElement {
         const coordinates = itinerary.instructions.map(step => [step.position.lat, step.position.lng]);
     
         if (coordinates.length > 0) {
-            this.displayRoute(coordinates); // Affiche la route sur la carte
+            this.displayRoute(coordinates, type); // Affiche la route sur la carte
             this.animateRoute(coordinates, itinerary.instructions); // Anime le parcours
         } else {
             console.warn('[Itinerary] No coordinates found in the received instructions.');
