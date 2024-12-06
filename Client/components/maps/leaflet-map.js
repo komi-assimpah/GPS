@@ -21,7 +21,29 @@ class LeafletMap extends HTMLElement {
         const template = document.createElement("template");
         template.innerHTML = `
           <link rel="stylesheet" href="../../leaflet-1.8.0/leaflet.css">
-          <div id="map" style="width: 100%; height: 100vh;"></div>
+           <style>
+            .instructions {
+                position: absolute;
+                bottom: 15px;
+                left: 70%;
+                transform: translateX(-50%);
+                background-color: #78B9BA;
+                //background: rgba(0, 0, 0, 0.7);
+                color: black;
+                padding: 10px;
+                border-radius: 8px;
+                font-size: 18px; /* Augmenter la taille du texte */
+                max-width: 100%; /* Augmenter la largeur */
+                // height: 100px; /* Augmenter la hauteur */
+                text-align: center;
+                z-index: 1000;
+            }
+            .instructions.hidden {
+                display: none;
+            }
+        </style>
+        <div id="map" style="width: 100%; height: 100vh;"></div>
+        <div class="instructions hidden" id="instructions"></div>
       `;
         this.shadowRoot.appendChild(template.content.cloneNode(true));
 
@@ -233,6 +255,8 @@ class LeafletMap extends HTMLElement {
         let index = 0; // Index des coordonnées
         let stepIndex = 0;
     
+        const instructionsDiv = this.shadowRoot.getElementById("instructions");
+
         if (this.animation) clearInterval(this.animation);
     
         this.animation = setInterval(() => {
@@ -242,6 +266,11 @@ class LeafletMap extends HTMLElement {
     
                 // Vérifiez si on entre dans une nouvelle étape
                 if (stepIndex < steps.length && index >= stepIndex) {
+
+
+                    const step = steps[stepIndex];
+                    instructionsDiv.textContent = `Étape ${stepIndex + 1}: ${step.text}`;
+
                     console.log(`Étape ${stepIndex + 1}:`);
                     console.log(`Instructions: ${steps[stepIndex].text}`);
                     console.log('step lat', steps[stepIndex].position.lat);
@@ -252,6 +281,8 @@ class LeafletMap extends HTMLElement {
                 index++;
             } else {
                 clearInterval(this.animation); // Arrête l'animation une fois terminée
+                instructionsDiv.textContent = "Vous êtes arrivé à destination !!!";
+
             }
         }, this.animationInterval);
     }
@@ -388,15 +419,22 @@ class LeafletMap extends HTMLElement {
         }
     }
     
-    
-        
-
-
 
     displaySteps(steps) {
+        const instructionsDiv = this.shadowRoot.getElementById("instructions");
+
+        if(steps.length > 0){
+            instructionsDiv.textContent = `Étape 1: ${steps[0].text}`;
+            instructionsDiv.classList.remove("hidden");
+            instructionsDiv.innerHTML = "";
+        }else{
+            instructionsDiv.textContent = "Aucune pas de route trouvée";
+        }
+
         console.log(`Distance: ${steps.distance} mètres`);
         console.log(`Durée: ${steps.duration} secondes`);
         steps.forEach((step, index) => {
+            instructionsDiv.textContent = `Étape 1: ${steps[0].text}`;
             console.log(`Étape ${index + 1}:`);
             console.log(`Instructions: ${step.text}`);
             console.log('step lat', step.position.lat);
