@@ -97,6 +97,9 @@ class LeafletMap extends HTMLElement {
             this.start = value;
             this.addStartMarker();
             this.updateRoute();
+            if (this.map) {
+                this.map.setView(this.start, 16); // 16 est le niveau de zoom
+            }
         } else if (name === "end") {
             this.end = value;
             this.addEndMarker();
@@ -147,8 +150,8 @@ class LeafletMap extends HTMLElement {
         const orsApiKey = "5b3ce3597851110001cf6248863d8fc1bc55493fa434eea86000ea6e";
         const url = `http://localhost:8733/Design_Time_Addresses/RoutingServer/Service1/suggestJourney?startLat=,${this.start[0]}&startLng=${this.start[1]}&endLat=${this.end[0]}&endLng=${this.end[1]}`;
 
-        // console.log("this.start", this.start);
-        // console.log("this.end", this.end);
+        console.log("this.start", this.start);
+        console.log("this.end", this.end);
         
 
         fetch(url)
