@@ -48,8 +48,11 @@ namespace ProxyCache
 
         public async Task<Itinerary> GetItineraryAsync(Position startPosition, Position endPosition, string profile)
         {
+            string cacheKey = $"{startPosition.Lat}_{startPosition.Lng}_{endPosition.Lat}_{endPosition.Lng}_{profile}";
+
             return await Task.Run(() => itineraryCache.Get(
-                startPosition + "_" + endPosition + "_" + profile, DateTimeOffset.Now.AddMinutes(5),
+                cacheKey,
+                DateTimeOffset.Now.AddMinutes(3),
                 (startPosition, endPosition, profile)).Itinerary
             );
         }

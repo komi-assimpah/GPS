@@ -23,7 +23,7 @@ function showPopupMessage(message, color = "#CE472F", duration = 5000) {
 departureBar.addEventListener("address-selected", (event) => {
     departureCoordinates = event.detail.coordinates;
     mapComponent.setAttribute("start", JSON.stringify(departureCoordinates));
-
+    // console.log("Départ sélectionné :", departureCoordinates);
     // Vérifiez si les coordonnées de destination sont déjà définies
     if (destinationCoordinates && JSON.stringify(departureCoordinates) === JSON.stringify(destinationCoordinates)) {
         showPopupMessage("Le départ et la destination doivent être différents");
@@ -35,6 +35,7 @@ destinationBar.addEventListener("address-selected", (event) => {
     mapComponent.setAttribute("end", JSON.stringify(destinationCoordinates));
 
     // Vérifiez si les coordonnées de départ sont déjà définies
+    // console.log("Destination sélectionnée :", destinationCoordinates);
     if (departureCoordinates && JSON.stringify(departureCoordinates) === JSON.stringify(destinationCoordinates)) {
         showPopupMessage("Le départ et la destination doivent être différents");
     }
@@ -59,34 +60,33 @@ document.addEventListener("DOMContentLoaded", () => {
       const { details, id } = event.detail;
       const suggestionComponent = document.getElementById(id);
   
-      // Vérifie si un autre détail est déjà affiché
-      if (currentDetailComponent && currentSuggestionComponent) {
-        console.log("Restauration de l'ancien composant");
-        currentDetailComponent.remove();
-        currentSuggestionComponent.classList.remove("hidden");
-        currentSuggestionComponent.style.display = ""; // Réinitialise le style inline si utilisé
-    }
+        // Vérifie si un autre détail est déjà affiché
+        if (currentDetailComponent && currentSuggestionComponent) {
+            console.log("Restauration de l'ancien composant");
+            currentDetailComponent.remove();
+            currentSuggestionComponent.classList.remove("hidden");
+            currentSuggestionComponent.style.display = ""; // Réinitialise le style inline si utilisé
+        }
   
-      // Crée et configure le nouveau composant ItineraryDetails
-      const detailComponent = document.createElement("itinerary-details");
-      detailComponent.updateSteps(details.steps);
-  
-      // Cache le composant ItinerarySuggestion original et insère le composant de détails après
-      suggestionComponent.classList.add("hidden");
-      suggestionComponent.style.display = "none"; // Forcer le masquage si nécessaire
-      suggestionComponent.insertAdjacentElement("afterend", detailComponent);
+        // Crée et configure le nouveau composant ItineraryDetails
+        const detailComponent = document.createElement("itinerary-details");
+        detailComponent.updateSteps(details.steps);
+
+        // Cache le composant ItinerarySuggestion original et insère le composant de détails après
+        suggestionComponent.classList.add("hidden");
+        suggestionComponent.style.display = "none"; // Forcer le masquage si nécessaire
+        suggestionComponent.insertAdjacentElement("afterend", detailComponent);
 
 
-      // Met à jour les références du composant actuel
-      currentDetailComponent = detailComponent;
-      currentSuggestionComponent = suggestionComponent;
-    
-      console.log("Nouveaux composants définis :", {
+        // Met à jour les références du composant actuel
+        currentDetailComponent = detailComponent;
+        currentSuggestionComponent = suggestionComponent;
+
+        console.log("Nouveaux composants définis :", {
         currentDetailComponent,
         currentSuggestionComponent,
     });
 
     });
-
-  });
+});
   

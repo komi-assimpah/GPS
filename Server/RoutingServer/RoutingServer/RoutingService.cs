@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.ServiceModel.Web;
 using System.Threading.Tasks;
 using ProxyCache.Models;
 
@@ -11,15 +13,25 @@ namespace RoutingServer
     {
         private ProxyServiceReference.ProxyServiceClient client = new ProxyServiceReference.ProxyServiceClient();
 
-        public Dictionary<string, Itinerary> suggestJourney(string startAddress, string endAddress)
+        public Dictionary<string, Itinerary> suggestJourney(string startLat, string startLng, string endLat, string endLng)
         {
+            AddCorsHeaders();
+
             Console.WriteLine("\nPlanning walking journey...");
 
-            var positions = convertPositions(startAddress, endAddress);
-            if (positions == (null, null))
-                return new Dictionary<string, Itinerary>();
+            Position startPosition = new Position
+            {
+                Lat = double.Parse(startLat.Trim(',')),
+                Lng = double.Parse(startLng.Trim(','))
+            };
 
-            var footItinerary = GetItineraryFromProxy(positions.startPosition, positions.endPosition).Result;
+            Position endPosition = new Position
+            {
+                Lat = double.Parse(endLat.Trim(',')),
+                Lng = double.Parse(endLng.Trim(','))
+            };
+
+            var footItinerary = GetItineraryFromProxy(startPosition, endPosition).Result;
             Boolean notByFoot = footItinerary.Distance == 0 || footItinerary.Duration == 0 || footItinerary.Instructions.Count == 0;
             if (notByFoot)
                 Console.WriteLine("\nUnable to compute walking itinerary");
@@ -27,13 +39,13 @@ namespace RoutingServer
             Console.WriteLine("\nPlanning cycling journey...");
 
             Boolean notCycling;
-            var closest = computeClosestStations(startAddress, endAddress);
+            var closest = computeClosestStations(startPosition, endPosition);
             if ((closest["StartAvailable"].Station == null || closest["EndAvailable"].Station == null))
                 notCycling = false;
 
-            var footItinerary1 = GetItineraryFromProxy(positions.startPosition, closest["StartAvailable"].Station.Position).Result;
-            var footItinerary2 = GetItineraryFromProxy(closest["EndAvailable"].Station.Position, positions.endPosition).Result;
-            var bikeItinerary = GetItineraryFromProxy(positions.startPosition, positions.endPosition, "cycling").Result;
+            var footItinerary1 = GetItineraryFromProxy(startPosition, closest["StartAvailable"].Station.Position).Result;
+            var footItinerary2 = GetItineraryFromProxy(closest["EndAvailable"].Station.Position, endPosition).Result;
+            var bikeItinerary = GetItineraryFromProxy(startPosition, endPosition, "cycling").Result;
 
             Boolean notByFoot1 = footItinerary1.Distance == 0 || footItinerary1.Duration == 0 || footItinerary1.Instructions.Count == 0;
             Boolean notByFoot2 = footItinerary2.Distance == 0 || footItinerary2.Duration == 0 || footItinerary2.Instructions.Count == 0;
@@ -108,20 +120,13 @@ namespace RoutingServer
             return itinerary;
         }
 
-        private Dictionary<string, (Station Station, Contract Contract)> computeClosestStations(string startAddress, string endAddress)
+        private Dictionary<string, (Station Station, Contract Contract)> computeClosestStations(Position startPosition, Position endPosition)
         {
             var closest = new Dictionary<string, (Station Station, Contract Contract)>
             {
                 { "StartClosest", (null, null) }, { "StartAvailable", (null, null) },
                 { "EndClosest", (null, null) }, { "EndAvailable", (null, null) }
             };
-
-            var positions = convertPositions(startAddress, endAddress);
-            if (positions == (null, null))
-            {
-                Console.WriteLine("\nUnable to compute closest stations");
-                return closest;
-            }
 
             double minStartDistance = double.MaxValue;
             double minEndDistance = double.MaxValue;
@@ -133,10 +138,10 @@ namespace RoutingServer
                 foreach (Station station in GetStationsFromProxy(contract.Name).Result)
                 {
                     (closest["StartClosest"], closest["StartAvailable"], (minStartDistance, minAvailableStartDistance)) = updateDistances(
-                        closest["StartClosest"], closest["StartAvailable"], (station, contract), positions.startPosition, (minStartDistance, minAvailableStartDistance), "start"
+                        closest["StartClosest"], closest["StartAvailable"], (station, contract), startPosition, (minStartDistance, minAvailableStartDistance), "start"
                     );
                     (closest["EndClosest"], closest["EndAvailable"], (minEndDistance, minAvailableEndDistance)) = updateDistances(
-                        closest["EndClosest"], closest["EndAvailable"], (station, contract), positions.endPosition, (minEndDistance, minAvailableEndDistance), "end"
+                        closest["EndClosest"], closest["EndAvailable"], (station, contract), endPosition, (minEndDistance, minAvailableEndDistance), "end"
                     );
                 }
             }
@@ -220,7 +225,20 @@ namespace RoutingServer
             return (closest, closestAvailable, (minDistance, minAvailableDistance));
         }
 
+        private void AddCorsHeaders()
+        {
+            var context = WebOperationContext.Current;
+            if (context != null)
+            {
+                context.OutgoingResponse.Headers.Add("Access-Control-Allow-Origin", "*");
+                context.OutgoingResponse.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                context.OutgoingResponse.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Accept");
+            }
+        }
+
     }
+
+
 
 }
 
