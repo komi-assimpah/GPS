@@ -12,6 +12,9 @@ namespace RoutingServer
     public class RoutingService : IRoutingService
     {
         private ProxyServiceReference.ProxyServiceClient client = new ProxyServiceReference.ProxyServiceClient();
+        private readonly ActiveMqProducer producer = new ActiveMqProducer();
+
+        Dictionary<string, Itinerary> result;
 
         public Dictionary<string, Itinerary> suggestJourney(string startLat, string startLng, string endLat, string endLng)
         {
@@ -69,20 +72,33 @@ namespace RoutingServer
             if (footItinerary.Duration < bikeAndFootDuration)
             {
                 Console.WriteLine("\nWalking is the best option");
-                return new Dictionary<string, Itinerary>
+                result = new Dictionary<string, Itinerary>
                 {
                     { "walking", footItinerary }
                 };
+
+                // Publier l'itinéraire dans ActiveMQ
+                Console.WriteLine("Publication de l'itinéraire dans ActiveMQ...");
+                producer.SendMessage("ItinerarySuggested", result);
+
+                return result;
+
             }
             else
             {
                 Console.WriteLine("\nCycling is the best option");
-                return new Dictionary<string, Itinerary>
+                result = new Dictionary<string, Itinerary>
                 {
-                    { "walking", footItinerary1 },
+                    { "walking1", footItinerary1 },
                     { "cycling", bikeItinerary },
-                    { "walking", footItinerary2 }
+                    { "walking2", footItinerary2 }
                 };
+
+                // Publier l'itinéraire dans ActiveMQ
+                Console.WriteLine("Publication de l'itinéraire dans ActiveMQ...");
+                producer.SendMessage("ItinerarySuggested", result);
+
+                return result;
             }
         }
 

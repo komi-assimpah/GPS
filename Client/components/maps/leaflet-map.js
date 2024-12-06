@@ -160,7 +160,7 @@ class LeafletMap extends HTMLElement {
                     throw new Error(`Erreur HTTP : ${response.status}`);
                     console.log("erreur pooo");
                 }
-                // console.log("response eeh", response);
+                console.log("response eeh", response);
                 return response.json();
             })
             .then((data) => {
