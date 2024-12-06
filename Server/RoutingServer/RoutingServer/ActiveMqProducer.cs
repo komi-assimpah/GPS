@@ -93,6 +93,11 @@ namespace RoutingServer
                 Console.WriteLine("[ActiveMQProducer] Error subscribing to queue: " + ex.Message);
                 throw;
             }
+            finally
+            {
+                // Déconnecte après l'envoi
+                Disconnect();
+            }
         }
 
         public void Disconnect()

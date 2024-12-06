@@ -179,7 +179,7 @@ class LeafletMap extends HTMLElement {
                 console.log("Données de l'itinéraire récupérées :", route);
     
                 // Publiez l'itinéraire dans ActiveMQ
-                this.sendItineraryToQueue(route);
+                //this.sendItineraryToQueue(route);
     
                 if (this.destMarker) {
                     this.destMarker.addTo(this.map);
@@ -323,46 +323,64 @@ class LeafletMap extends HTMLElement {
         client.onConnect = (frame) => {
             console.log('Connected to ActiveMQ:', frame);
     
-            client.subscribe('/queue/itinerary', (message) => {
+
+            client.subscribe('/queue/ItinerarySuggested', (message) => {
                 if (message.body) {
                     try {
-                        const itinerary = JSON.parse(message.body);
-                        console.log('Itinéraire reçu depuis ActiveMQ:', itinerary);
-    
-                        // Adaptation au nouveau format de données
-                        console.log("Itinéraire reçu depuis ActiveMQ :", itinerary.instructions);
-                        const steps = itinerary.instructions;
-                        if (!steps || steps.length === 0) {
-                            console.warn("Aucune étape trouvée dans l'itinéraire reçu.");
-                            return;
-                        }
-    
-                        console.log("Étapes de l'itinéraire steps:",steps);
-                        this.displaySteps(steps); // Affichez les étapes textuelles
-    
-                        // Préparez les coordonnées si disponibles
-                        const coordinates = steps.map(step => [step.position.lat, step.position.lng]);
-                        if (coordinates.length > 0) {
-                            //console.log("Coordonnées de l'itinéraire :", coordinates);
-                            this.displayRoute(coordinates);
-                            this.animateRoute(coordinates, steps);
-                        } else {
-                            console.warn("Aucune coordonnée trouvée pour les étapes.");
+                        const data = JSON.parse(message.body);
+                        console.log('[ActiveMQ] Message received:', data);
+
+                        // Parcourir les clés du message pour extraire les itinéraires 
+                        // (ex: walking, cycling, driving, etc.)
+                        for (const key in data) {
+                            if (data.hasOwnProperty(key)) {
+                                const itinerary = data[key]; // Itinéraire (ex: walking, cycling)
+                                console.log(`[ActiveMQ] Processing itinerary for '${key}':`, itinerary);
+
+                                // Vérifiez si l'itinéraire contient des instructions valides
+                                if (itinerary.instructions && itinerary.instructions.length > 0) {
+                                    this.handleReceivedItinerary(itinerary);
+                                } else {
+                                    console.warn(`[Itinerary] No valid instructions found for '${key}'.`);
+                                }
+                            }
                         }
                     } catch (error) {
-                        console.error("Erreur lors de l'analyse de l'itinéraire reçu :", error);
+                        console.error('[ActiveMQ] Error processing message:', error);
                     }
                 }
             });
         };
-    
         client.onStompError = (frame) => {
-            console.error('Broker error:', frame.headers['message']);
-            console.error('Details:', frame.body);
+            console.error('[ActiveMQ] Broker error:', frame.headers['message']);
+            console.error('[ActiveMQ] Details:', frame.body);
         };
-    
         client.activate();
     }
+
+    handleReceivedItinerary(itinerary) {
+        if (!itinerary || !itinerary.instructions || itinerary.instructions.length === 0) {
+            console.warn('[Itinerary] No steps found in the received itinerary.');
+            return;
+        }
+    
+        console.log('[Itinerary] Instructions received:', itinerary.instructions);
+    
+        // Afficher les étapes dans la console
+        this.displaySteps(itinerary.instructions);
+    
+        // Extraire les coordonnées pour tracer la route
+        const coordinates = itinerary.instructions.map(step => [step.position.lat, step.position.lng]);
+    
+        if (coordinates.length > 0) {
+            this.displayRoute(coordinates); // Affiche la route sur la carte
+            this.animateRoute(coordinates, itinerary.instructions); // Anime le parcours
+        } else {
+            console.warn('[Itinerary] No coordinates found in the received instructions.');
+        }
+    }
+    
+    
         
 
 
