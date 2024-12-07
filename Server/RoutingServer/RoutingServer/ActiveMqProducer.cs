@@ -14,10 +14,13 @@ namespace RoutingServer
         private readonly IConnectionFactory connectionFactory;
         private IConnection connection;
         private ISession session;
+        private readonly string uniqueId;
+
 
         public ActiveMqProducer(string brokerUri = "activemq:tcp://localhost:61616")
         {
             connectionFactory = new ConnectionFactory(brokerUri);
+            uniqueId = Guid.NewGuid().ToString();
         }
 
         public void Connect()
@@ -36,7 +39,7 @@ namespace RoutingServer
             }
         }
 
-        public void SendMessage<T>(string queueName, T message)
+        public void SendMessage<T>(string queueName, string clientId, T message)
         {
             try
             {
@@ -50,23 +53,24 @@ namespace RoutingServer
                 // Sérialisation en JSON
                 string serializedMessage = JsonConvert.SerializeObject(message);
 
-                IDestination destination = session.GetQueue(queueName);
+                IDestination destination = session.GetQueue($"{queueName}-{clientId}");
+
                 using (IMessageProducer producer = session.CreateProducer(destination))
                 {
                     ITextMessage textMessage = producer.CreateTextMessage(serializedMessage);
                     producer.Send(textMessage);
-                    Console.WriteLine($"[ActiveMQProducer] Message sent to queue '{queueName}': {serializedMessage}");
+                    Console.WriteLine($"[ActiveMQProducer] Message sent to queue '{queueName}-{clientId}': {serializedMessage}");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ActiveMQProducer] Error sending message to queue '{queueName}': {ex.Message}");
+                Console.WriteLine($"[ActiveMQProducer] Error sending message to queue '{queueName}-{clientId}': {ex.Message}");
                 throw;
             }
         }
 
 
-        public void SubscribeToQueue(string queueName, Action<string> onMessageReceived)
+        /*public void SubscribeToQueue(string queueName, Action<string> onMessageReceived)
         {
             try
             {
@@ -98,7 +102,7 @@ namespace RoutingServer
                 // Déconnecte après l'envoi
                 Disconnect();
             }
-        }
+        }*/
 
         public void Disconnect()
         {
@@ -113,6 +117,11 @@ namespace RoutingServer
                 Console.WriteLine("[ActiveMQProducer] Error disconnecting from ActiveMQ: " + ex.Message);
                 throw;
             }
+        }
+        
+        public string GetUniqueClientId()
+        {
+            return Guid.NewGuid().ToString();
         }
     }
 }

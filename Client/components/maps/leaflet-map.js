@@ -15,6 +15,8 @@ class LeafletMap extends HTMLElement {
         this.animationInterval = 300; // Intervalle de mise à jour pour l'animation (en ms)
 
         this.scriptsLoaded = false; // Ajout d'un indicateur pour vérifier si les scripts sont chargés
+        this.clientId = `client-${Math.random().toString(36).substring(2, 9)}`;
+
     }
 
     connectedCallback() {
@@ -169,18 +171,19 @@ class LeafletMap extends HTMLElement {
             console.error("Erreur : les coordonnées de départ ou d'arrivée sont manquantes.");
             return;
         }
-        const orsApiKey = "5b3ce3597851110001cf6248863d8fc1bc55493fa434eea86000ea6e";
-        const url = `http://localhost:8733/Design_Time_Addresses/RoutingServer/Service1/suggestJourney?startLat=,${this.start[0]}&startLng=${this.start[1]}&endLat=${this.end[0]}&endLng=${this.end[1]}`;
-
-        console.log("this.start", this.start);
-        console.log("this.end", this.end);
-        
+        //const orsApiKey = "5b3ce3597851110001cf6248863d8fc1bc55493fa434eea86000ea6e";
+        const url = `http://localhost:8733/Design_Time_Addresses/RoutingServer/Service1/suggestJourney?startLat=${this.start[0]}&startLng=${this.start[1]}&endLat=${this.end[0]}&endLng=${this.end[1]}&clientId=${this.clientId}`;
+    
+        console.log("Départ :", this.start);
+        console.log("Arrivée :", this.end);
+        console.log("clientId :", this.clientId);
+        console.log("Requête envoyée à :", url);
 
         fetch(url)
             .then((response) => {
                 if (!response.ok) {
+                    console.error("Erreur HTTP :", response.status);
                     throw new Error(`Erreur HTTP : ${response.status}`);
-                    console.log("erreur pooo");
                 }
                 console.log("response eeh", response);
                 return response.json();
@@ -310,37 +313,6 @@ class LeafletMap extends HTMLElement {
             return "Erreur lors de la récupération de l'adresse";
         }
     }
-
-    /*sendItineraryToQueue(data) {
-        const client = new StompJs.Client({
-            brokerURL: 'ws://localhost:61614',
-            connectHeaders: { login: 'user', passcode: 'password' },
-            debug: function (str) {
-                console.log('[STOMP Debug]', str);
-            },
-            reconnectDelay: 5000,
-        });
-    
-        client.onConnect = function (frame) {
-            //console.log('[STOMP Connected]', frame);
-            console.log('STOMP Connecté à ActiveMQ:');
-            try {
-                client.publish({
-                    destination: '/queue/itinerary',
-                    body: JSON.stringify(data),
-                });
-                console.log('[STOMP Publish] Message envoyé:', data);
-            } catch (error) {
-                console.error('[STOMP Publish Error]', error);
-            }
-        };
-    
-        client.onStompError = function (frame) {
-            console.error('[STOMP Error]', frame.headers['message'], frame.body);
-        };
-    
-        client.activate();
-    }*/
     
 
     subscribeToQueue() {
@@ -363,7 +335,7 @@ class LeafletMap extends HTMLElement {
             console.log('Connected to ActiveMQ:', frame);
     
 
-            client.subscribe('/queue/ItinerarySuggested', (message) => {
+            client.subscribe(`/queue/ItinerarySuggested-${this.clientId}`, (message) => {
                 if (message.body) {
                     try {
                         const data = JSON.parse(message.body);

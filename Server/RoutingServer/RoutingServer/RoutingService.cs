@@ -16,9 +16,9 @@ namespace RoutingServer
 
         Dictionary<string, Itinerary> result;
 
-        public Dictionary<string, Itinerary> suggestJourney(string startLat, string startLng, string endLat, string endLng)
+        public Dictionary<string, Itinerary> suggestJourney(string startLat, string startLng, string endLat, string endLng, string clientId)
         {
-            AddCorsHeaders();
+            Utils.AddCorsHeaders();
 
             Console.WriteLine("\nPlanning walking journey...");
 
@@ -79,7 +79,7 @@ namespace RoutingServer
 
                 // Publier l'itinéraire dans ActiveMQ
                 Console.WriteLine("Publication de l'itinéraire dans ActiveMQ...");
-                producer.SendMessage("ItinerarySuggested", result);
+                producer.SendMessage($"ItinerarySuggested", clientId, result);
 
                 return result;
 
@@ -96,7 +96,7 @@ namespace RoutingServer
 
                 // Publier l'itinéraire dans ActiveMQ
                 Console.WriteLine("Publication de l'itinéraire dans ActiveMQ...");
-                producer.SendMessage("ItinerarySuggested", result);
+                producer.SendMessage($"ItinerarySuggested", clientId, result);
 
                 return result;
             }
@@ -241,16 +241,10 @@ namespace RoutingServer
             return (closest, closestAvailable, (minDistance, minAvailableDistance));
         }
 
-        private void AddCorsHeaders()
-        {
-            var context = WebOperationContext.Current;
-            if (context != null)
-            {
-                context.OutgoingResponse.Headers.Add("Access-Control-Allow-Origin", "*");
-                context.OutgoingResponse.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-                context.OutgoingResponse.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Accept");
-            }
-        }
+
+
+
+
 
     }
 
