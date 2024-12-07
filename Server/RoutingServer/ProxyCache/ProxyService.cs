@@ -5,8 +5,6 @@ using ProxyCache.JCDecaux;
 using ProxyCache.OpenStreetMap;
 using System.Threading.Tasks;
 using ProxyCache.Models;
-using Newtonsoft.Json;
-using System.Text;
 using System.Linq;
 
 namespace ProxyCache
@@ -17,7 +15,7 @@ namespace ProxyCache
         private readonly GenericProxyCache<JCDecauxStation> stationsCache = new GenericProxyCache<JCDecauxStation>();
 
         private readonly GenericProxyCache<OSMPosition> positionCache = new GenericProxyCache<OSMPosition>();
-        private readonly GenericProxyCache<ORSMItinerary> itineraryCache = new GenericProxyCache<ORSMItinerary>();
+        private readonly GenericProxyCache<ORSItinerary> itineraryCache = new GenericProxyCache<ORSItinerary>();
 
 
         //===========================JCDecaux===========================

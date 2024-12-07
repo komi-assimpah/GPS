@@ -47,6 +47,20 @@ mapComponent.addEventListener("destination-selected", (event) => {
     destinationBar.updateInputWithCoordinates(address);
 });
 
+document.addEventListener("reset-search-bars", () => {
+    departureBar.updateInputWithCoordinates(""); // Réinitialiser le champ de départ
+    destinationBar.updateInputWithCoordinates(""); // Réinitialiser le champ de destination
+    departureCoordinates = null; // Réinitialiser les variables de coordonnées
+    destinationCoordinates = null;
+});
+
+// Écoute de l'événement `departure-selected`
+mapComponent.addEventListener("departure-selected", (event) => {
+    const { address } = event.detail;
+    departureBar.updateInputWithCoordinates(address);
+});
+
+
 
 document.addEventListener("DOMContentLoaded", () => {
     const itineraries = document.getElementById("itineraries");
