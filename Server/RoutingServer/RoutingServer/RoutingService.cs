@@ -72,7 +72,7 @@ namespace RoutingServer
             var footDuration = footItinerary?.Duration ?? double.MaxValue;
             var cyclingDuration = cyclingItineraries.Values.Sum(itinerary => itinerary?.Duration ?? double.MaxValue);
 
-            if (footDuration > cyclingDuration)
+            if (footDuration < cyclingDuration)
             {
                 Console.WriteLine("\nWalking is the best option");
                 var result = new Dictionary<string, Itinerary> { { "walking", footItinerary } };
