@@ -10,7 +10,7 @@ namespace RoutingServer
     public interface IRoutingService
     {
         [OperationContract]
-        [WebGet(UriTemplate = "/suggestJourney?startAddress={startAddress}&endAddress={endAddress}")]
-        Dictionary<string, Itinerary> suggestJourney(string startAddress, string endAddress);
+        [WebGet(UriTemplate = "/suggestJourney?startLng={startLng}&startLat={startLat}&endLng={endLng}&endLat={endLat}")]
+        Dictionary<string, Itinerary> suggestJourney(string startLng, string startLat, string endLng, string endLat);
     }
 }

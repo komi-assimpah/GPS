@@ -5,10 +5,10 @@ namespace ProxyCache.Models
     [DataContract]
     public class Position
     {
-        [DataMember(Name = "lng")]
+        [DataMember(Name = "lat")]
         public double Lat { get; set; }
 
-        [DataMember(Name = "lat")]
+        [DataMember(Name = "lng")]
         public double Lng { get; set; }
     }
 }

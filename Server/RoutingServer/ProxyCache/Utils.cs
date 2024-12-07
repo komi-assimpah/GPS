@@ -7,7 +7,8 @@
 
         public const string NominatimOSMBaseUrl = "https://nominatim.openstreetmap.org";
 
-        public const string RouterOSRMBaseUrl = "https://router.project-osrm.org/route/v1";
+        public const string OpenRouteServiceAPIKey = "5b3ce3597851110001cf624824bd903b76814b368f9f27201f568edd";
+        public const string OpenRouteServiceBaseUrl = "https://router.project-osrm.org/route/v1";
 
         public const int batchSize = 100;
     }

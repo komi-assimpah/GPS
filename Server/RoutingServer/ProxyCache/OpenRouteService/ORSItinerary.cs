@@ -3,16 +3,16 @@ using ProxyCache.Models;
 
 namespace ProxyCache.OpenStreetMap
 {
-    internal class ORSMItinerary : ICacheable
+    internal class ORSItinerary : ICacheable
     {
         public Itinerary Itinerary { get; set; }
 
-        public ORSMItinerary() {}
+        public ORSItinerary() {}
 
         void ICacheable.Fill(object obj)
         {
             (Position startPosition, Position endPosition, string profile) = ((Position, Position, string))obj;
-            Itinerary = OpenStreetMapREST.GetItinerary(startPosition, endPosition, profile).Result;
+            Itinerary = OpenRouteServiceREST.GetItinerary(startPosition, endPosition, profile).Result;
         }
     }
 }
