@@ -4,431 +4,257 @@ using System.Globalization;
 using System.Linq;
 using System.ServiceModel.Web;
 using System.Threading.Tasks;
-//using RoutingServer.ContractTypes;
 using ProxyCache.Models;
-
 
 namespace RoutingServer
 {
     public class RoutingService : IRoutingService
     {
-        private ProxyServiceReference.ProxyServiceClient client = new ProxyServiceReference.ProxyServiceClient();
-        private readonly ActiveMqProducer producer = new ActiveMqProducer();
+        private readonly ProxyServiceReference.ProxyServiceClient client;
+        private readonly ActiveMqProducer producer;
 
+        public RoutingService()
+        {
+            client = new ProxyServiceReference.ProxyServiceClient();
+            producer = new ActiveMqProducer();
+        }
 
-        Dictionary<string, Itinerary> result;
-
+        // Principal point d'entrée pour suggérer un itinéraire entre deux points
         public Dictionary<string, Itinerary> suggestJourney(string startLat, string startLng, string endLat, string endLng, string clientId)
         {
+            // Ajouter les en-têtes CORS pour permettre l'accès cross-origin
             Utils.AddCorsHeaders();
 
+            // Convertir les coordonnées en objets Position
+            var startPosition = ParsePosition(startLat, startLng);
+            var endPosition = ParsePosition(endLat, endLng);
+
             Console.WriteLine("\nPlanning walking journey...");
+            // Calcul de l'itinéraire à pied
+            var footItinerary = GetSafeItinerary(startPosition, endPosition, "foot-walking");
 
-            Position startPosition = new Position
+            if (IsItineraryInvalid(footItinerary))
             {
-                Lat = double.Parse(startLat.Trim(',')),
-                Lng = double.Parse(startLng.Trim(','))
-            };
-
-            Position endPosition = new Position
-            {
-                Lat = double.Parse(endLat.Trim(',')),
-                Lng = double.Parse(endLng.Trim(','))
-            };
-
-            Itinerary footItinerary = GetItineraryFromProxy(startPosition, endPosition).Result;
-            bool notByFoot = footItinerary.Distance == 0 || footItinerary.Duration == 0 || footItinerary.Instructions.Count == 0;
-
-            if (notByFoot)
                 Console.WriteLine("\nUnable to compute walking itinerary");
-            footItinerary.Duration = double.MaxValue;
+            }
 
             Console.WriteLine("\nPlanning cycling journey...");
+            // Planification de l'itinéraire en vélo
+            var cyclingItineraries = PlanCyclingJourney(startPosition, endPosition, footItinerary);
 
-            int index = 0;
+            // Déterminer la meilleure option entre marcher ou faire du vélo
+            return DetermineBestOption(clientId, footItinerary, cyclingItineraries);
+        }
 
-            bool notCycling = false;
+        // Planifie l'itinéraire en vélo, incluant les segments de marche pour accéder aux stations
+        private Dictionary<string, Itinerary> PlanCyclingJourney(Position start, Position end, Itinerary footItinerary)
+        {
+            var cyclingItineraries = new Dictionary<string, Itinerary>();
+            var contracts = GetContracts();
 
+            // Trouver les stations les plus proches pour le début et la fin
+            var closestStations = FindClosestStations(start, end, contracts);
 
-            double bikeJourneyDuration = double.MaxValue;
-            double bikeJourneyDistance = double.MaxValue;
-
-            Dictionary<string, Itinerary> bikeJourneyItineraries = new Dictionary<string, Itinerary>();
-
-            var contracts = resolveContracts(startPosition, endPosition);
-
-            if (contracts.Start.Contract == contracts.End.Contract)
+            // Ajouter les segments de marche et de vélo s'il existe des stations valides
+            if (closestStations.Start.Station != null && closestStations.End.Station != null)
             {
-                if (!contracts.Start.Station.Equals(contracts.End.Station))
-                {
-                    if (!startPosition.Equals(contracts.Start.Station.Position))
-                    {
-                        Itinerary footItinerary1 = GetItineraryFromProxy(startPosition, contracts.Start.Station.Position).Result;
-                        if (footItinerary1.Distance != 0)
-                            bikeJourneyItineraries.Add(((index++) + 1) + "_walking", footItinerary1);
-                        else
-                            notCycling = true;
-                    }
-                    
-                    Itinerary bikeItinerary = GetItineraryFromProxy(contracts.Start.Station.Position, contracts.End.Station.Position, "cycling-regular").Result;
-                    if (bikeItinerary.Distance != 0)
-                        bikeJourneyItineraries.Add(((index++) + 1) + "_cycling", bikeItinerary);
-                    else
-                        notCycling = true;
-
-                    if (!endPosition.Equals(contracts.End.Station.Position))
-                    {
-                        Itinerary footItinerary2 = GetItineraryFromProxy(contracts.End.Station.Position, endPosition).Result;
-                        if (footItinerary2.Distance != 0)
-                            bikeJourneyItineraries.Add(((index++) + 1) + "_walking", footItinerary2);
-                        else
-                            notCycling = true;
-                    }
-                }
-                else {
-                    bikeJourneyItineraries = new Dictionary<string, Itinerary>
-                    {
-                        { "1_walking", footItinerary }
-                    };
-                }
-            }
-            else
-            {
-                bool departOnBike = false;
-                bool arriveOnBike = false;
-
-                Position finalPosition = startPosition;
-
-                List<Contract> suitableContracts = GetContractsFromProxy().Result;
-                List<Contract> contractsToUse = new List<Contract>();
-
-                Contract contract;
-
-                Itinerary entryItinerary = null;
-                Itinerary bikeItinerary = null;
-                Itinerary exitItinerary = null;
-
-                List<Contract> newSuitableContracts;
-
-                while (suitableContracts.Count > 0 && notCycling == false)
-                {
-                    (contract, entryItinerary, bikeItinerary, exitItinerary, newSuitableContracts) = GetSuitableContracts(startPosition, endPosition, suitableContracts);
-
-                    if (contract == null && entryItinerary == null && bikeItinerary == null && exitItinerary == null && newSuitableContracts.Count == 0)
-                    {
-                        Console.WriteLine("\nNo suitable contracts found");
-                        notCycling = true;
-                        break;
-                    }
-                    else if (index == 0 && finalPosition.Equals(bikeItinerary.Instructions.First().Position))
-                    {
-                        departOnBike = true;
-                    }
-
-                    notCycling = !departOnBike && (entryItinerary == null);
-                    notCycling = !notCycling && (bikeItinerary == null);
-
-                    if (!notCycling)
-                    {
-                        bikeJourneyItineraries.Add((index + 1) + "_walking", entryItinerary);
-                        index++;
-
-                        bikeJourneyItineraries.Add((index + 1) + "_cycling", bikeItinerary);
-                        finalPosition = bikeItinerary.Instructions.Last().Position;
-                        index++;
-                    }
-
-                    if (finalPosition.Equals(endPosition))
-                    {
-                        arriveOnBike = true;
-                    }
-                    notCycling = !arriveOnBike && !notCycling && (exitItinerary == null);
-
-                    suitableContracts = newSuitableContracts;
-                    contractsToUse.Add(contract);
-                }
-                if (arriveOnBike && !notCycling)
-                {
-                        bikeJourneyItineraries.Add((index + 1) + "_walking", exitItinerary);
-
-                        bikeJourneyDuration = bikeJourneyItineraries.Values.Sum(itinerary => itinerary.Duration);
-                        bikeJourneyDistance = bikeJourneyItineraries.Values.Sum(itinerary => itinerary.Distance);
-                }
+                AddWalkingSegment(cyclingItineraries, start, closestStations.Start.Station.Position, "walking-to-bike");
+                AddCyclingSegment(cyclingItineraries, closestStations.Start.Station.Position, closestStations.End.Station.Position, "cycling");
+                AddWalkingSegment(cyclingItineraries, closestStations.End.Station.Position, end, "walking-from-bike");
             }
 
-            if (notCycling)
-            {
-                Console.WriteLine("\nNo suitable cycling itinerary found");
-                notCycling = true;
-            }
+            return cyclingItineraries;
+        }
 
-            if (notCycling && notByFoot)
-            {
-                Console.WriteLine("\nUnable to find a journey");
-                return new Dictionary<string, Itinerary>();
-            }
+        // Détermine l'option optimale (marche ou vélo) et publie les résultats dans ActiveMQ
+        private Dictionary<string, Itinerary> DetermineBestOption(string clientId, Itinerary footItinerary, Dictionary<string, Itinerary> cyclingItineraries)
+        {
+            var footDuration = footItinerary?.Duration ?? double.MaxValue;
+            var cyclingDuration = cyclingItineraries.Values.Sum(itinerary => itinerary?.Duration ?? double.MaxValue);
 
-            if (footItinerary.Duration < bikeJourneyDuration)
+            if (footDuration > cyclingDuration)
             {
                 Console.WriteLine("\nWalking is the best option");
-                result = new Dictionary<string, Itinerary>
-                {
-                    { "1_walking", footItinerary }
-                };
-
-                // Publier l'itinéraire dans ActiveMQ
-                Console.WriteLine("Publication de l'itinéraire dans ActiveMQ...");
-                producer.SendMessage($"ItinerarySuggested", clientId, result);
-
+                var result = new Dictionary<string, Itinerary> { { "walking", footItinerary } };
+                PublishToActiveMq(clientId, result);
                 return result;
-
+            }
+            else if (cyclingItineraries.Any())
+            {
+                Console.WriteLine("\nCycling is the best option");
+                PublishToActiveMq(clientId, cyclingItineraries);
+                return cyclingItineraries;
             }
             else
             {
-                Console.WriteLine("\nCycling is the best option");
-                // Publier l'itinéraire dans ActiveMQ
-                Console.WriteLine("Publication de l'itinéraire dans ActiveMQ...");
-                producer.SendMessage($"ItinerarySuggested", clientId, bikeJourneyItineraries);
-
-                return bikeJourneyItineraries;
-
+                Console.WriteLine("\nNo suitable journey found");
+                return new Dictionary<string, Itinerary>();
             }
         }
 
-        private async Task<List<Contract>> GetContractsFromProxy()
+        // Convertit des coordonnées de chaîne de caractères en Position
+        private Position ParsePosition(string lat, string lng)
         {
-            Contract[] contractsArray = await client.GetAllContractsAsync();
-            return contractsArray.ToList();
-        }
-
-        public async Task<List<Station>> GetStationsFromProxy(string contractName)
-        {
-            int pageNumber = 0;
-            List<Station> stations = new List<Station>();
-            while (true)
+            return new Position
             {
-                Station[] stationsArray = await client.GetContractStationsAsync(contractName, pageNumber);
-                foreach (Station station in stationsArray)
-                    stations.Add(station);
-                if (stationsArray.Length < 100)
-                    break;
-                pageNumber++;
-            }
-            return stations;
-        }
-
-        private async Task<Position> resolveAddressFromProxy(string address)
-        {
-            Position position = await client.ResolveAddressAsync(address);
-            return position;
-        }
-
-        private async Task<Itinerary> GetItineraryFromProxy(Position startPosition, Position endPosition, string profile = "foot-walking")
-        {
-            Itinerary itinerary = await client.GetItineraryAsync(startPosition, endPosition, profile);
-            return itinerary;
-        }
-
-        private Dictionary<string, (Station Station, Contract Contract)> computeClosestStations(Position startPosition, Position endPosition, List<Contract> contracts)
-
-        {
-            var closest = new Dictionary<string, (Station Station, Contract Contract)>
-            {
-                { "Start", (null, null) }, { "End", (null, null) }
+                Lat = double.Parse(lat.Trim(',')),
+                Lng = double.Parse(lng.Trim(','))
             };
+        }
 
-            double minStartDistance = double.MaxValue;
-            double minEndDistance = double.MaxValue;
+        // Vérifie si un itinéraire est invalide (distance/durée nulle ou pas d'instructions)
+        private bool IsItineraryInvalid(Itinerary itinerary)
+        {
+            return itinerary.Distance == 0 || itinerary.Duration == 0 || itinerary.Instructions.Count == 0;
+        }
+
+        // Appelle le service pour obtenir un itinéraire, avec gestion des erreurs
+        private Itinerary GetSafeItinerary(Position start, Position end, string profile = "foot-walking")
+        {
+            try
+            {
+                return client.GetItineraryAsync(start, end, profile).Result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching itinerary: {ex.Message}");
+                return new Itinerary { Distance = 0, Duration = 0, Instructions = new List<Instruction>() };
+            }
+        }
+
+        // Ajoute un segment de marche à la collection d'itinéraires
+        private void AddWalkingSegment(Dictionary<string, Itinerary> itineraries, Position start, Position end, string segmentName)
+        {
+            var walkingItinerary = GetSafeItinerary(start, end, "foot-walking");
+            if (!IsItineraryInvalid(walkingItinerary))
+            {
+                itineraries.Add(segmentName, walkingItinerary);
+            }
+        }
+
+        // Ajoute un segment de vélo à la collection d'itinéraires
+        private void AddCyclingSegment(Dictionary<string, Itinerary> itineraries, Position start, Position end, string segmentName)
+        {
+            var cyclingItinerary = GetSafeItinerary(start, end, "cycling-road");
+            if (!IsItineraryInvalid(cyclingItinerary))
+            {
+                itineraries.Add(segmentName, cyclingItinerary);
+            }
+        }
+
+        // Récupère la liste des contrats depuis le service proxy
+        private List<Contract> GetContracts()
+        {
+            try
+            {
+                return client.GetAllContractsAsync().Result.ToList();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching contracts: {ex.Message}");
+                return new List<Contract>();
+            }
+        }
+
+        // Trouve les stations les plus proches pour le départ et l'arrivée
+        /*private (StationInfo Start, StationInfo End) FindClosestStations(Position start, Position end, List<Contract> contracts)
+        {
+            var closestStart = FindClosestStation(start, contracts, true);
+            var closestEnd = FindClosestStation(end, contracts, false);
+
+            return (closestStart, closestEnd);
+        }*/
+
+        // Trouve les stations les plus proches pour le départ et l'arrivée, tout en vérifiant qu'elles appartiennent au même contrat
+        private (StationInfo Start, StationInfo End) FindClosestStations(Position start, Position end, List<Contract> contracts)
+        {
+            double minDistanceStart = double.MaxValue;
+            double minDistanceEnd = double.MaxValue;
+
+            StationInfo closestStart = default;
+            StationInfo closestEnd = default;
 
             foreach (var contract in contracts)
             {
-                foreach (Station station in GetStationsFromProxy(contract.Name).Result)
+                var stations = GetStations(contract.Name);
+
+                // Trouver la station de départ la plus proche pour ce contrat
+                var startStation = stations
+                    .Where(station => IsStationValid(station, true)) // Station avec vélos disponibles
+                    .OrderBy(station => CalculateDistance(start, station.Position))
+                    .FirstOrDefault();
+
+                // Trouver la station d'arrivée la plus proche pour ce contrat
+                var endStation = stations
+                    .Where(station => IsStationValid(station, false)) // Station avec stands disponibles
+                    .OrderBy(station => CalculateDistance(end, station.Position))
+                    .FirstOrDefault();
+
+                // Si les deux stations existent pour ce contrat, calculer les distances
+                if (startStation != null && endStation != null)
                 {
-                    double distance = GetItineraryFromProxy(station.Position, startPosition).Result.Distance;
+                    double distanceStart = CalculateDistance(start, startStation.Position);
+                    double distanceEnd = CalculateDistance(end, endStation.Position);
 
-                    if (distance < minStartDistance && station.Status == "OPEN" && station.AvailableBikes > 0)
-                        (closest["Start"], minStartDistance) = ((station, contract), distance);
-                    if (distance < minEndDistance && station.Status == "OPEN" && station.AvailableBikeStands > 0)
-                        (closest["End"], minEndDistance) = ((station, contract), distance);
-
-
-                }
-            }
-
-            return closest;
-        }
-
-        private Station getStation(int stationNumber, string contractName)
-        {
-            foreach (Station station in GetStationsFromProxy(contractName).Result)
-            {
-                if (station.Number == stationNumber)
-                    return station;
-            }
-
-            return null;
-        }
-
-        private Station getClosestStation(int stationNumber, string contractName)
-        {
-            Station choosenStation = getStation(stationNumber, contractName);
-            if (choosenStation == null)
-                return null;
-
-            Station closestStation = null;
-            double minDistance = double.MaxValue;
-
-            foreach (Contract contract in GetContractsFromProxy().Result)
-            {
-                foreach (Station station in GetStationsFromProxy(contract.Name).Result)
-                {
-
-                    double distance = GetItineraryFromProxy(station.Position, closestStation.Position).Result.Distance;
-
-                    if (distance < minDistance && distance != 0)
-                        (minDistance, closestStation) = (distance, station);
-                }
-            }
-
-            return closestStation;
-        }
-
-        public ((Station Station, Contract Contract) Start, (Station Station, Contract Contract) End) resolveContracts(Position startPosition, Position endPosition)
-        {
-            var closest = computeClosestStations(startPosition, endPosition, GetContractsFromProxy().Result);
-            return (closest["Start"], closest["End"]);
-        }
-
-        public (Contract BestContract, Itinerary EntryItinerary, Itinerary bikeItinerary, Itinerary ExitItinerary, List<Contract> PossibleContracts) GetSuitableContracts(Position startPosition, Position endPosition, List<Contract> suitableContracts)
-        {
-            var possibleContracts = new List<Contract>();
-            Dictionary<Contract, Itinerary> entryItineraries = new Dictionary<Contract, Itinerary>();
-
-            Itinerary entryItinerary = null;
-            Itinerary cyclingItinerary = null;
-            Itinerary exitItinerary = null;
-
-            Contract bestContract = null;
-
-            double minDuration = double.MaxValue;
-
-            var footItinerary = GetItineraryFromProxy(startPosition, endPosition, "foot-walking").Result;
-
-            if (footItinerary.Distance == 0 || footItinerary.Duration == 0 || footItinerary.Instructions.Count == 0)
-            {
-                Console.WriteLine("Walking itinerary could not be computed.");
-                return (null, null, null, null, new List<Contract>());
-            }
-
-            foreach (var contract in suitableContracts)
-            {
-                Console.WriteLine($"Evaluating contract: {contract.Name}");
-
-                ((Station Station, Itinerary Itinerary) Entry, (Station Station, Itinerary Itinerary) Exit) = FindSideStations(startPosition, endPosition, contract);
-
-                if (Entry == (null, null) || Exit == (null, null))
-                {
-                    Console.WriteLine($"No valid entry/exit stations for contract: {contract.Name}");
-                    continue;
-                }
-
-                if (!startPosition.Equals(Entry.Station.Position)) entryItineraries.Add(contract, Entry.Itinerary);
-
-                var bikeItinerary = GetItineraryFromProxy(Entry.Station.Position, Exit.Station.Position, "cycling-regular").Result;
-
-                if (bikeItinerary.Distance == 0 || bikeItinerary.Duration == 0 || bikeItinerary.Instructions.Count == 0)
-                {
-                    Console.WriteLine($"Biking itinerary could not be computed for contract: {contract.Name}");
-                    return (null, null, null, null, new List<Contract>());
-                }
-
-                double totalDuration = Entry.Itinerary.Duration + bikeItinerary.Duration + Exit.Itinerary.Duration;
-
-                Console.WriteLine($"Contract {contract.Name}: Total duration (foot + bike) = {totalDuration} seconds");
-
-                if (totalDuration < footItinerary.Duration)
-                {
-                    Console.WriteLine($"Contract {contract.Name} is advantageous. Adding to possible contracts.");
-                    possibleContracts.Add(contract);
-
-                    if (minDuration > totalDuration)
+                    // Mettre à jour si les distances sont plus petites
+                    if (distanceStart < minDistanceStart && distanceEnd < minDistanceEnd)
                     {
-                        minDuration = totalDuration;
-                        entryItinerary = (!startPosition.Equals(Entry.Station.Position)) ? Entry.Itinerary : null;
-                        cyclingItinerary = bikeItinerary;
-                        exitItinerary = (!endPosition.Equals(Exit.Station.Position)) ? Exit.Itinerary : null;
-                        bestContract = contract;
+                        minDistanceStart = distanceStart;
+                        minDistanceEnd = distanceEnd;
+
+                        closestStart = new StationInfo(startStation, contract);
+                        closestEnd = new StationInfo(endStation, contract);
                     }
                 }
-                else
+            }
+
+            return (closestStart, closestEnd);
+        }
+
+
+
+        // Recherche la station la plus proche pour une position donnée
+        private StationInfo FindClosestStation(Position position, List<Contract> contracts, bool findBikeStations)
+        {
+            double minDistance = double.MaxValue;
+            Station closestStation = null;
+            Contract closestContract = null;
+
+            foreach (var contract in contracts)
+            {
+                foreach (var station in GetStations(contract.Name))
                 {
-                    Console.WriteLine($"Contract {contract.Name} is not advantageous.");
+                    if (IsStationValid(station, findBikeStations))
+                    {
+                        var distance = CalculateDistance(position, station.Position);
+                        if (distance < minDistance)
+                        {
+                            minDistance = distance;
+                            closestStation = station;
+                            closestContract = contract;
+                        }
+                    }
                 }
             }
 
-            possibleContracts = possibleContracts.Where(contract =>
-            {
-                bool got = entryItineraries.TryGetValue(contract, out Itinerary itinerary);
-                return (got) ? itinerary.Distance < entryItinerary.Distance : false;
-            }).ToList();
-
-            return (bestContract, entryItinerary, cyclingItinerary, exitItinerary, possibleContracts);
+            return new StationInfo(closestStation, closestContract);
         }
 
-        private ((Station Station, Itinerary Itinerary) Entry, (Station Station, Itinerary Itinerary) Exit) FindSideStations(Position startPosition, Position endPosition, Contract contract)
+        // Vérifie si une station est valide (ouverte et disponible pour vélos ou stands)
+        //bool findBikeStations: true pour les stations de vélos, false pour les stations de stands
+        private bool IsStationValid(Station station, bool findBikeStations)
         {
-
-            List<string> cities = contract.Cities;
-
-            var closest = computeClosestStations(startPosition, endPosition, new List<Contract> { contract });
-
-            Position center = new Position
-            {
-                Lat = (startPosition.Lat + endPosition.Lat) / 2,
-                Lng = (startPosition.Lng + endPosition.Lng) / 2
-            };
-
-            if (CalculateDistance(center, startPosition) < CalculateDistance(center, closest["Start"].Station.Position))
-                return ((null, null), (null, null));
-
-            List<Station> stations = GetStationsFromProxy(contract.Name).Result;
-            List<Station> standStations = stations.Where(station => station.Status == "OPEN" && station.AvailableBikeStands > 0).ToList();
-            List<Station> bikeStations = stations.Where(station => station.Status == "OPEN" && station.AvailableBikes > 0).ToList();
-
-            if (standStations.Count == 0 || bikeStations.Count == 0)
-                return ((null, null), (null, null));
-
-            var entryStation = stations
-                .Select(station => new
-                {
-                    Station = station,
-                    Itinerary = GetItineraryFromProxy(startPosition, station.Position).Result
-                })
-                .OrderBy(stationInfo => stationInfo.Itinerary.Distance)
-                .FirstOrDefault();
-
-            var exitStation = stations
-                .Select(station => new
-                {
-                    Station = station,
-                    Itinerary = GetItineraryFromProxy(station.Position, endPosition).Result
-                })
-                .OrderBy(stationInfo => stationInfo.Itinerary.Distance)
-                .FirstOrDefault();
-
-            if (entryStation == null || exitStation == null || entryStation.Station == exitStation.Station)
-                return ((null, null), (null, null));
-
-            return ((entryStation.Station, entryStation.Itinerary), (exitStation.Station, exitStation.Itinerary));
+            return station.Status == "OPEN" &&
+                   ((findBikeStations && station.AvailableBikes > 0) ||
+                    (!findBikeStations && station.AvailableBikeStands > 0));
         }
 
+        // Calcule la distance entre deux positions géographiques
         private double CalculateDistance(Position pos1, Position pos2)
         {
             double earthRadiusKm = 6371;
-
             double dLat = DegreesToRadians(pos2.Lat - pos1.Lat);
             double dLng = DegreesToRadians(pos2.Lng - pos1.Lng);
-
             double lat1 = DegreesToRadians(pos1.Lat);
             double lat2 = DegreesToRadians(pos2.Lat);
 
@@ -439,13 +265,51 @@ namespace RoutingServer
             return earthRadiusKm * c;
         }
 
-
+        // Convertit des degrés en radians
         private double DegreesToRadians(double degrees)
         {
             return degrees * Math.PI / 180;
         }
 
+        // Récupère les stations pour un contrat donné
+        private List<Station> GetStations(string contractName)
+        {
+            try
+            {
+                return client.GetContractStationsAsync(contractName, 0).Result.ToList();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching stations for contract {contractName}: {ex.Message}");
+                return new List<Station>();
+            }
+        }
 
+        // Publie les résultats dans ActiveMQ
+        private void PublishToActiveMq(string clientId, Dictionary<string, Itinerary> itineraries)
+        {
+            try
+            {
+                producer.SendMessage($"ItinerarySuggested", clientId, itineraries);
+                Console.WriteLine("Itinerary published to ActiveMQ.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error publishing itinerary to ActiveMQ: {ex.Message}");
+            }
+        }
     }
 
+    // Structure pour contenir une station et son contrat associé
+    public struct StationInfo
+    {
+        public Station Station { get; }
+        public Contract Contract { get; }
+
+        public StationInfo(Station station, Contract contract)
+        {
+            Station = station;
+            Contract = contract;
+        }
+    }
 }

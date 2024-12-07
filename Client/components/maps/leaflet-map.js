@@ -6,17 +6,18 @@ class LeafletMap extends HTMLElement {
     constructor() {
         super();
         this.attachShadow({ mode: "open" });
-        this.start = [43.69676878749648, 7.2787016118204555]; // Coordonnées initiales de départ
+        this.start = [43.69676878749648, 7.2787016118204555]; // Coordonnées de départ par defaut
         this.end = null;
 
-        this.originMarker = null; // Marqueur d'origine unique
-        this.destMarker = null; // Marqueur de destination unique
-        this.cyclistMarker = null; // Marqueur de cycliste unique
+        this.originMarker = null; 
+        this.destMarker = null;
+        this.cyclistMarker = null; 
         this.animationInterval = 300; // Intervalle de mise à jour pour l'animation (en ms)
 
-        this.scriptsLoaded = false; // Ajout d'un indicateur pour vérifier si les scripts sont chargés
+        this.scriptsLoaded = false;
         this.clientId = `client-${Math.random().toString(36).substring(2, 9)}`;
 
+        this.itinerariesQueue = []; // Pour stocker les itinéraires avant animation
     }
 
     connectedCallback() {
@@ -30,13 +31,11 @@ class LeafletMap extends HTMLElement {
                 left: 70%;
                 transform: translateX(-50%);
                 background-color: #78B9BA;
-                //background: rgba(0, 0, 0, 0.7);
                 color: black;
                 padding: 10px;
                 border-radius: 8px;
-                font-size: 18px; /* Augmenter la taille du texte */
-                max-width: 100%; /* Augmenter la largeur */
-                // height: 100px; /* Augmenter la hauteur */
+                font-size: 18px;
+                max-width: 100%;
                 text-align: center;
                 z-index: 1000;
             }
@@ -49,7 +48,6 @@ class LeafletMap extends HTMLElement {
       `;
         this.shadowRoot.appendChild(template.content.cloneNode(true));
 
-        // Charger les scripts Leaflet de manière asynchrone avant d'initialiser la carte
         this.loadScript("../../leaflet-1.8.0/leaflet.js")
             .then(() => {
                 this.scriptsLoaded = true;
@@ -75,18 +73,15 @@ class LeafletMap extends HTMLElement {
         if (!this.scriptsLoaded) return;
 
         const mapElement = this.shadowRoot.getElementById("map");
-
         this.map = L.map(mapElement).setView(this.start, 16);
 
         L.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
-            attribution:
-                'Leaflet &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors',
+            attribution:'Leaflet &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors',
             maxZoom: 18,
         }).addTo(this.map);
 
         this.addStartMarker(); // Ajoute le marqueur de départ
 
-        // Abonnez-vous à la queue ActiveMQ
         this.subscribeToQueue();
 
         //when an address on the map is clicked destiionnation coordinates are updated
@@ -133,7 +128,7 @@ class LeafletMap extends HTMLElement {
 
     addStartMarker() {
         const startIcon = L.icon({
-            iconUrl: "../../assets/icons/pin.png", // Icône pour le départ
+            iconUrl: "../../assets/icons/pin.png",
             iconSize: [40, 40],
         });
 
@@ -171,7 +166,7 @@ class LeafletMap extends HTMLElement {
             console.error("Erreur : les coordonnées de départ ou d'arrivée sont manquantes.");
             return;
         }
-        //const orsApiKey = "5b3ce3597851110001cf6248863d8fc1bc55493fa434eea86000ea6e";
+
         const url = `http://localhost:8733/Design_Time_Addresses/RoutingServer/Service1/suggestJourney?startLat=${this.start[0]}&startLng=${this.start[1]}&endLat=${this.end[0]}&endLng=${this.end[1]}&clientId=${this.clientId}`;
     
         console.log("Départ :", this.start);
@@ -203,8 +198,7 @@ class LeafletMap extends HTMLElement {
                 const route = data.suggestJourneyResult[0].Value;
                 console.log("Données de l'itinéraire récupérées :", route);
     
-                // Publiez l'itinéraire dans ActiveMQ
-                //this.sendItineraryToQueue(route);
+
     
                 if (this.destMarker) {
                     this.destMarker.addTo(this.map);
@@ -214,106 +208,6 @@ class LeafletMap extends HTMLElement {
                 console.error("Erreur lors de la récupération de l'itinéraire :", error);
             });
     }
-
-    displayRoute(coordinates, type) {
-        console.log(`[displayRoute] Drawing route of type '${type}'`);
-    
-        let colorOfItinerary = "blue"; // Couleur par défaut pour le vélo
-        if (type === "walking") {
-            colorOfItinerary = "red"; // Rouge pour la marche
-        }
-
-        // console.log("colorOfItinerary confirm:", colorOfItinerary);
-
-        const latLngs = coordinates.map((coord) => L.latLng(coord[0], coord[1]));
-    
-        // Supprime l'itinéraire précédent, s'il existe
-        if (this.routeLayer) {
-            this.map.removeLayer(this.routeLayer);
-        }
-    
-        // Ajoute l'itinéraire à la carte
-        this.routeLayer = L.polyline(latLngs, { color: colorOfItinerary }).addTo(this.map);
-    
-        // Ajuste la vue de la carte pour inclure tout l'itinéraire
-        this.map.fitBounds(this.routeLayer.getBounds());
-    }
-
-
-
-    animateRoute(coordinates, steps) {
-        const cyclistIcon = L.icon({
-            iconUrl: "../../assets/icons/cycling.png", // Icône pour le cycliste
-            iconSize: [40, 40],
-        });
-    
-        // Supprimez l'ancien marqueur, si nécessaire
-        if (this.cyclistMarker) {
-            this.map.removeLayer(this.cyclistMarker);
-        }
-    
-        // Créez un nouveau marqueur pour le cycliste
-        this.cyclistMarker = L.marker(this.start, { icon: cyclistIcon }).addTo(this.map);
-    
-        let index = 0; // Index des coordonnées
-        let stepIndex = 0;
-    
-        const instructionsDiv = this.shadowRoot.getElementById("instructions");
-
-        if (this.animation) clearInterval(this.animation);
-    
-        this.animation = setInterval(() => {
-            if (index < coordinates.length) {
-                const [lat, lng] = coordinates[index];
-                this.cyclistMarker.setLatLng([lat, lng]);
-    
-                // Vérifiez si on entre dans une nouvelle étape
-                if (stepIndex < steps.length && index >= stepIndex) {
-
-
-                    const step = steps[stepIndex];
-                    instructionsDiv.textContent = `Étape ${stepIndex + 1}: ${step.text}`;
-
-                    console.log(`Étape ${stepIndex + 1}:`);
-                    console.log(`Instructions: ${steps[stepIndex].text}`);
-                    console.log('step lat', steps[stepIndex].position.lat);
-                    console.log('step lng', steps[stepIndex].position.lng);
-                    stepIndex++;
-                }
-    
-                index++;
-            } else {
-                clearInterval(this.animation); // Arrête l'animation une fois terminée
-                instructionsDiv.textContent = "Vous êtes arrivé à destination !!!";
-
-            }
-        }, this.animationInterval);
-    }
-        
-
-    // Méthode pour obtenir une adresse à partir de coordonnées (latitude, longitude)
-    async fetchAddressFromCoordinates(lat, lon) {
-        const url = `https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`;
-
-        try {
-            const response = await fetch(url);
-            const data = await response.json();
-
-            if (data.features && data.features.length > 0) {
-                // Récupère l'adresse textuelle
-                const address = data.features[0].properties.label;
-                // console.log("Adresse trouvée:", address);
-                return address; // Renvoie l'adresse
-            } else {
-                console.warn("Aucune adresse trouvée pour ces coordonnées.");
-                return "Adresse inconnue";
-            }
-        } catch (error) {
-            console.error("Erreur lors de la récupération de l'adresse :", error);
-            return "Erreur lors de la récupération de l'adresse";
-        }
-    }
-    
 
     subscribeToQueue() {
         const client = new StompJs.Client({
@@ -329,11 +223,9 @@ class LeafletMap extends HTMLElement {
             heartbeatIncoming: 4000,
             heartbeatOutgoing: 4000,
         });
-    
-        // Utilisez une fonction fléchée pour conserver le contexte de `this`
+
         client.onConnect = (frame) => {
             console.log('Connected to ActiveMQ:', frame);
-    
 
             client.subscribe(`/queue/ItinerarySuggested-${this.clientId}`, (message) => {
                 if (message.body) {
@@ -341,21 +233,10 @@ class LeafletMap extends HTMLElement {
                         const data = JSON.parse(message.body);
                         console.log('[ActiveMQ] Message received:', data);
 
-                        // Parcourir les clés du message pour extraire les itinéraires 
-                        // (ex: walking, cycling, driving, etc.)
-                        for (const key in data) {
-                            if (data.hasOwnProperty(key)) {
-                                const itinerary = data[key]; // Itinéraire (ex: walking, cycling)
-                                console.log(`[ActiveMQ] Processing itinerary for '${key}':`, itinerary);
+                        // On passe maintenant par une méthode qui récupère tous les itinéraires
+                        // puis les anime séquentiellement
+                        this.handleAllItineraries(data);
 
-                                // Vérifiez si l'itinéraire contient des instructions valides
-                                if (itinerary.instructions && itinerary.instructions.length > 0) {
-                                    this.handleReceivedItinerary(itinerary, key);
-                                } else {
-                                    console.warn(`[Itinerary] No valid instructions found for '${key}'.`);
-                                }
-                            }
-                        }
                     } catch (error) {
                         console.error('[ActiveMQ] Error processing message:', error);
                     }
@@ -369,28 +250,101 @@ class LeafletMap extends HTMLElement {
         client.activate();
     }
 
-    handleReceivedItinerary(itinerary, type) {
-        if (!itinerary || !itinerary.instructions || itinerary.instructions.length === 0) {
-            console.warn('[Itinerary] No steps found in the received itinerary.');
-            return;
+    async handleAllItineraries(itinerariesData) {
+        // Réinitialiser la file d'itinéraires
+        this.itinerariesQueue = [];
+    
+        // On stocke tous les itinéraires dans this.itinerariesQueue
+        for (const key in itinerariesData) {
+            if (itinerariesData.hasOwnProperty(key)) {
+                const itinerary = itinerariesData[key];
+                if (itinerary.instructions && itinerary.instructions.length > 0) {
+                    this.itinerariesQueue.push({ type: key, itinerary });
+                }
+            }
         }
     
-        console.log('[Itinerary] Instructions received:', itinerary.instructions);
-    
-        // Afficher les étapes dans la console
-        this.displaySteps(itinerary.instructions);
-    
-        // Extraire les coordonnées pour tracer la route
-        const coordinates = itinerary.instructions.map(step => [step.position.lat, step.position.lng]);
-    
-        if (coordinates.length > 0) {
-            this.displayRoute(coordinates, type); // Affiche la route sur la carte
-            this.animateRoute(coordinates, itinerary.instructions); // Anime le parcours
-        } else {
-            console.warn('[Itinerary] No coordinates found in the received instructions.');
+        // Afficher tous les itinéraires
+        for (let i = 0; i < this.itinerariesQueue.length; i++) {
+            const { type, itinerary } = this.itinerariesQueue[i];
+            const coordinates = itinerary.instructions.map(step => [step.position.lat, step.position.lng]);
+            this.displayRoute(coordinates, type);
         }
+    
+        // Animer tous les itinéraires dans l'ordre
+        for (let i = 0; i < this.itinerariesQueue.length; i++) {
+            const { type, itinerary } = this.itinerariesQueue[i];
+            const coordinates = itinerary.instructions.map(step => [step.position.lat, step.position.lng]);
+            await this.animateRouteSequential(coordinates, itinerary.instructions);
+        }
+    
+        // Une fois tous les segments animés
+        const instructionsDiv = this.shadowRoot.getElementById("instructions");
+        instructionsDiv.textContent = "Vous êtes arrivé à destination !";
     }
+
+    displayRoute(coordinates, type) {
+        console.log(`[displayRoute] Drawing route of type '${type}'`);
     
+        let colorOfItinerary = "red";
+        if (type.includes("cycling")) {
+            colorOfItinerary = "blue";
+        }
+
+        const latLngs = coordinates.map((coord) => L.latLng(coord[0], coord[1]));
+
+        if (!this.routeLayers) {
+            this.routeLayers = [];
+        }
+
+        const routeLayer = L.polyline(latLngs, { color: colorOfItinerary }).addTo(this.map);
+        this.routeLayers.push(routeLayer);
+
+        // On ajuste la vue pour montrer tous les itinéraires affichés
+        const allBounds = this.routeLayers.reduce((bounds, layer) => bounds.extend(layer.getBounds()), L.latLngBounds());
+        this.map.fitBounds(allBounds);
+    }
+
+    animateRouteSequential(coordinates, steps) {
+        return new Promise((resolve) => {
+            const cyclistIcon = L.icon({
+                iconUrl: "../../assets/icons/cycling.png",
+                iconSize: [40, 40],
+            });
+    
+            // Supprimez l'ancien marqueur, si nécessaire
+            if (this.cyclistMarker) {
+                this.map.removeLayer(this.cyclistMarker);
+            }
+    
+            this.cyclistMarker = L.marker(coordinates[0], { icon: cyclistIcon }).addTo(this.map);
+        
+            let index = 0;
+            let stepIndex = 0;
+        
+            const instructionsDiv = this.shadowRoot.getElementById("instructions");
+            instructionsDiv.classList.remove("hidden");
+        
+            const intervalId = setInterval(() => {
+                if (index < coordinates.length) {
+                    const [lat, lng] = coordinates[index];
+                    this.cyclistMarker.setLatLng([lat, lng]);
+        
+                    if (stepIndex < steps.length && index >= stepIndex) {
+                        const step = steps[stepIndex];
+                        instructionsDiv.textContent = `Étape ${stepIndex + 1}: ${step.text}`;
+                        stepIndex++;
+                    }
+        
+                    index++;
+                } else {
+                    clearInterval(intervalId);
+                    // À la fin de ce segment, on résout la promesse
+                    resolve();
+                }
+            }, this.animationInterval);
+        });
+    }
 
     displaySteps(steps) {
         const instructionsDiv = this.shadowRoot.getElementById("instructions");
@@ -399,7 +353,7 @@ class LeafletMap extends HTMLElement {
             instructionsDiv.textContent = `Étape 1: ${steps[0].text}`;
             instructionsDiv.classList.remove("hidden");
             instructionsDiv.innerHTML = "";
-        }else{
+        } else {
             instructionsDiv.textContent = "Aucune pas de route trouvée";
         }
 
@@ -411,13 +365,27 @@ class LeafletMap extends HTMLElement {
             console.log(`Instructions: ${step.text}`);
             console.log('step lat', step.position.lat);
             console.log('step lng', step.position.lng);
-
         });
     }
-    
+
+    async fetchAddressFromCoordinates(lat, lon) {
+        const url = `https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`;
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.features && data.features.length > 0) {
+                const address = data.features[0].properties.label;
+                return address;
+            } else {
+                console.warn("Aucune adresse trouvée pour ces coordonnées.");
+                return "Adresse inconnue";
+            }
+        } catch (error) {
+            console.error("Erreur lors de la récupération de l'adresse :", error);
+            return "Erreur lors de la récupération de l'adresse";
+        }
+    }
 }
-
-
-
 
 customElements.define("leaflet-map", LeafletMap);
