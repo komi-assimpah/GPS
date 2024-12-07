@@ -275,7 +275,7 @@ class LeafletMap extends HTMLElement {
         for (let i = 0; i < this.itinerariesQueue.length; i++) {
             const { type, itinerary } = this.itinerariesQueue[i];
             const coordinates = itinerary.instructions.map(step => [step.position.lat, step.position.lng]);
-            await this.animateRouteSequential(coordinates, itinerary.instructions);
+            await this.animateRouteSequential(type, coordinates, itinerary.instructions);
         }
     
         // Une fois tous les segments animés
@@ -305,10 +305,19 @@ class LeafletMap extends HTMLElement {
         this.map.fitBounds(allBounds);
     }
 
-    animateRouteSequential(coordinates, steps) {
+    animateRouteSequential(type, coordinates, steps) {
         return new Promise((resolve) => {
-            const cyclistIcon = L.icon({
-                iconUrl: "../../assets/icons/cycling.png",
+            let iconUrl;
+            if (type.includes("walking")) {
+                iconUrl = "../../assets/icons/walking.png";
+            } else if (type.includes("cycling")) {
+                iconUrl = "../../assets/icons/cycling.png";
+            } else {
+                iconUrl = "../../assets/icons/location.png";
+            }
+    
+            const markerIcon = L.icon({
+                iconUrl: iconUrl,
                 iconSize: [40, 40],
             });
     
@@ -317,7 +326,7 @@ class LeafletMap extends HTMLElement {
                 this.map.removeLayer(this.cyclistMarker);
             }
     
-            this.cyclistMarker = L.marker(coordinates[0], { icon: cyclistIcon }).addTo(this.map);
+            this.cyclistMarker = L.marker(coordinates[0], { icon: markerIcon }).addTo(this.map);
         
             let index = 0;
             let stepIndex = 0;
@@ -339,12 +348,12 @@ class LeafletMap extends HTMLElement {
                     index++;
                 } else {
                     clearInterval(intervalId);
-                    // À la fin de ce segment, on résout la promesse
-                    resolve();
+                    resolve(); // L'animation de ce segment est terminée
                 }
             }, this.animationInterval);
         });
     }
+    
 
     displaySteps(steps) {
         const instructionsDiv = this.shadowRoot.getElementById("instructions");
