@@ -11,16 +11,18 @@ class LeafletMap extends HTMLElement {
 
         this.originMarker = null; 
         this.destMarker = null;
-        this.cyclistMarker = null; 
-        this.animationInterval = 300; // Intervalle de mise à jour pour l'animation (en ms)
+        this.travelerMarker = null; 
+        this.animationInterval = 30; // Intervalle de mise à jour pour l'animation (en ms)
 
         this.scriptsLoaded = false;
         this.clientId = `client-${Math.random().toString(36).substring(2, 9)}`;
 
         this.itinerariesQueue = []; // Pour stocker les itinéraires avant animation
+
+
     }
 
-    connectedCallback() {
+    async connectedCallback() {
         const template = document.createElement("template");
         template.innerHTML = `
           <link rel="stylesheet" href="../../leaflet-1.8.0/leaflet.css">
@@ -48,14 +50,26 @@ class LeafletMap extends HTMLElement {
       `;
         this.shadowRoot.appendChild(template.content.cloneNode(true));
 
-        this.loadScript("../../leaflet-1.8.0/leaflet.js")
-            .then(() => {
-                this.scriptsLoaded = true;
-                this.loadMap();
-            })
-            .catch((error) =>
-                console.error("Échec du chargement des scripts Leaflet:", error)
-            );
+        try {
+            // Charger d'abord la carte
+            await this.loadScript("../../leaflet-1.8.0/leaflet.js");
+            this.scriptsLoaded = true;
+            this.loadMap();
+    
+            // Ensuite récupérer l'adresse et émettre l'événement
+            const departureAddress = await this.fetchAddressFromCoordinates(this.start[0], this.start[1]);
+            this.dispatchEvent(new CustomEvent("departure-selected", {
+                detail: {
+                    address: departureAddress,
+                    coordinates: [this.start[0], this.start[1]]
+                },
+                bubbles: true,
+                composed: true
+            }));
+            console.log("Adresse de départ récupérée :", departureAddress);
+        } catch (error) {
+            console.error("Erreur lors de l'initialisation de la carte:", error);
+        }
     }
 
     loadScript(src) {
@@ -63,8 +77,7 @@ class LeafletMap extends HTMLElement {
             const script = document.createElement("script");
             script.src = src;
             script.onload = () => resolve();
-            script.onerror = () =>
-                reject(new Error(`Échec du chargement du script: ${src}`));
+            script.onerror = () => reject(new Error(`Échec du chargement du script: ${src}`));
             this.shadowRoot.appendChild(script);
         });
     }
@@ -79,6 +92,8 @@ class LeafletMap extends HTMLElement {
             attribution:'Leaflet &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors',
             maxZoom: 18,
         }).addTo(this.map);
+
+
 
         this.addStartMarker();
 
@@ -96,7 +111,6 @@ class LeafletMap extends HTMLElement {
             this.setAttribute("end", JSON.stringify([lat, lng])); 
 
             const address = await this.fetchAddressFromCoordinates(lat, lng);
-            this.setAttribute("end", JSON.stringify(address));
 
             // Émettre un événement pour informer la `search-bar` de destination
             this.dispatchEvent(new CustomEvent("destination-selected", {
@@ -123,6 +137,9 @@ class LeafletMap extends HTMLElement {
             this.end = value;
             this.addEndMarker();
             this.updateRoute();
+            if (this.map) {
+                this.map.setView(this.end, 16); // 16 est le niveau de zoom
+            }
         }
     }
 
@@ -260,12 +277,14 @@ class LeafletMap extends HTMLElement {
             }
         }
     
+        // Afficher les itinéraires
         for (let i = 0; i < this.itinerariesQueue.length; i++) {
             const { type, itinerary } = this.itinerariesQueue[i];
             const coordinates = itinerary.instructions.map(step => [step.position.lat, step.position.lng]);
             this.displayRoute(coordinates, type);
         }
     
+        // Animer les itinéraires
         for (let i = 0; i < this.itinerariesQueue.length; i++) {
             const { type, itinerary } = this.itinerariesQueue[i];
             const coordinates = itinerary.instructions.map(step => [step.position.lat, step.position.lng]);
@@ -274,6 +293,15 @@ class LeafletMap extends HTMLElement {
     
         const instructionsDiv = this.shadowRoot.getElementById("instructions");
         instructionsDiv.textContent = "Vous êtes arrivé à destination !";
+
+
+
+        //attendre 5 secondes avant de réinitialiser la carte
+        setTimeout(() => {
+            this.resetMap();
+        }, 4000);
+        
+
     }
 
     displayRoute(coordinates, type) {
@@ -314,11 +342,11 @@ class LeafletMap extends HTMLElement {
                 iconSize: [40, 40],
             });
     
-            if (this.cyclistMarker) {
-                this.map.removeLayer(this.cyclistMarker);
+            if (this.travelerMarker) {
+                this.map.removeLayer(this.travelerMarker);
             }
     
-            this.cyclistMarker = L.marker(coordinates[0], { icon: markerIcon }).addTo(this.map);
+            this.travelerMarker = L.marker(coordinates[0], { icon: markerIcon }).addTo(this.map);
         
             let index = 0;
             let stepIndex = 0;
@@ -329,8 +357,11 @@ class LeafletMap extends HTMLElement {
             const intervalId = setInterval(() => {
                 if (index < coordinates.length) {
                     const [lat, lng] = coordinates[index];
-                    this.cyclistMarker.setLatLng([lat, lng]);
+                    this.travelerMarker.setLatLng([lat, lng]);
         
+                    this.map.setView([lat, lng], this.map.getZoom(), { animate: true });
+
+
                     if (stepIndex < steps.length && index >= stepIndex) {
                         const step = steps[stepIndex];
                         instructionsDiv.textContent = `Étape ${stepIndex + 1}: ${step.text}`;
@@ -387,6 +418,30 @@ class LeafletMap extends HTMLElement {
             return "Erreur lors de la récupération de l'adresse";
         }
     }
+
+    resetMap() {
+        [this.originMarker, this.destMarker, this.travelerMarker].forEach(marker => {
+            if (marker) this.map.removeLayer(marker);
+        });
+    
+        if (this.routeLayers) {
+            this.routeLayers.forEach(layer => this.map.removeLayer(layer));
+            this.routeLayers = [];
+        }
+    
+        this.start = null;
+        this.end = null;
+
+
+        // Réinitialiser les coordonnées de départ et d'arrivée
+        //et contenu dans le front
+        this.dispatchEvent(new CustomEvent("reset-search-bars", {
+            detail: {},
+            bubbles: true,
+            composed: true
+        }));
+    }
+    
 }
 
 customElements.define("leaflet-map", LeafletMap);

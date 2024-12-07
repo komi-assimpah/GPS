@@ -40,33 +40,6 @@
     <script src="./components/maps/leaflet-map.js" defer></script>
     <script src="./components/popup/popup.js " defer></script>
     <script src="./scripts/interaction.js" defer></script>
-    <!-- Script principal pour gérer les interactions -->
-    <!-- <script>
-      // Références des éléments
-      const mapComponent = document.getElementById("mapComponent");
-      const departureBar = document.getElementById("departure");
-      const destinationBar = document.getElementById("destination");
 
-      // Écouteurs pour chaque `search-bar`
-      departureBar.addEventListener("address-selected", (event) => {
-          const { coordinates } = event.detail;
-          mapComponent.setAttribute("start", JSON.stringify(coordinates));
-      });
-
-      destinationBar.addEventListener("address-selected", (event) => {
-          const { coordinates } = event.detail;
-          mapComponent.setAttribute("end", JSON.stringify(coordinates));
-      });
-
-
-
-
-    // Écoute de l'événement `destination-selected`
-    mapComponent.addEventListener("destination-selected", (event) => {
-    const { address } = event.detail;
-    // console.log("Adresse reçue :", address);
-    destinationBar.updateInputWithCoordinates(address);
-});
-    </script> -->
 </body>
 </html>
