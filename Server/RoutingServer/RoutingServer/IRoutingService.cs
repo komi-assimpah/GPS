@@ -1,7 +1,8 @@
-﻿using ProxyCache.Models;
+using ProxyCache.Models;
 using System.Collections.Generic;
 using System.ServiceModel;
 using System.ServiceModel.Web;
+using System.Threading.Tasks;
 
 
 namespace RoutingServer
@@ -10,7 +11,14 @@ namespace RoutingServer
     public interface IRoutingService
     {
         [OperationContract]
-        [WebGet(UriTemplate = "/suggestJourney?startLng={startLng}&startLat={startLat}&endLng={endLng}&endLat={endLat}")]
-        Dictionary<string, Itinerary> suggestJourney(string startLng, string startLat, string endLng, string endLat);
+        //[WebInvoke(Method = "GET", UriTemplate = "/suggestJourney?startLat={startLat}&startLng={startLng}&endLat={endLat}&endLng={endLng}&clientId={clientId}", RequestFormat = WebMessageFormat.Json, ResponseFormat = WebMessageFormat.Json, BodyStyle = WebMessageBodyStyle.Wrapped)]
+        //Dictionary<string, Itinerary> suggestJourney(string startLat, string startLng, string endLat, string endLng, string clientId);
+
+        [WebInvoke(Method = "GET", UriTemplate = "/suggestJourney?startLat={startLat}&startLng={startLng}&endLat={endLat}&endLng={endLng}&clientId={clientId}", RequestFormat = WebMessageFormat.Json, ResponseFormat = WebMessageFormat.Json)]
+        Dictionary<string, Itinerary> suggestJourney(string startLat, string startLng, string endLat, string endLng, string clientId);
+
+
+
+
     }
 }

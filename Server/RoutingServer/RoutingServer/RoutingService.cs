@@ -1,6 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.ServiceModel.Web;
 using System.Threading.Tasks;
 //using RoutingServer.ContractTypes;
 using ProxyCache.Models;
@@ -11,25 +13,32 @@ namespace RoutingServer
     public class RoutingService : IRoutingService
     {
         private ProxyServiceReference.ProxyServiceClient client = new ProxyServiceReference.ProxyServiceClient();
+        private readonly ActiveMqProducer producer = new ActiveMqProducer();
 
-        public Dictionary<string, Itinerary> suggestJourney(string startLng, string startLat, string endLng, string endLat)
+
+        Dictionary<string, Itinerary> result;
+
+        public Dictionary<string, Itinerary> suggestJourney(string startLat, string startLng, string endLat, string endLng, string clientId)
         {
+            Utils.AddCorsHeaders();
+
             Console.WriteLine("\nPlanning walking journey...");
 
             Position startPosition = new Position
             {
-                Lat = double.Parse(startLat.ToString()),
-                Lng = double.Parse(startLng.ToString())
+                Lat = double.Parse(startLat.Trim(',')),
+                Lng = double.Parse(startLng.Trim(','))
             };
 
             Position endPosition = new Position
             {
-                Lat = double.Parse(endLat.ToString()),
-                Lng = double.Parse(endLng.ToString())
+                Lat = double.Parse(endLat.Trim(',')),
+                Lng = double.Parse(endLng.Trim(','))
             };
 
             Itinerary footItinerary = GetItineraryFromProxy(startPosition, endPosition).Result;
             bool notByFoot = footItinerary.Distance == 0 || footItinerary.Duration == 0 || footItinerary.Instructions.Count == 0;
+
             if (notByFoot)
                 Console.WriteLine("\nUnable to compute walking itinerary");
             footItinerary.Duration = double.MaxValue;
@@ -39,6 +48,7 @@ namespace RoutingServer
             int index = 0;
 
             bool notCycling = false;
+
 
             double bikeJourneyDuration = double.MaxValue;
             double bikeJourneyDistance = double.MaxValue;
@@ -161,15 +171,27 @@ namespace RoutingServer
             if (footItinerary.Duration < bikeJourneyDuration)
             {
                 Console.WriteLine("\nWalking is the best option");
-                return new Dictionary<string, Itinerary>
+                result = new Dictionary<string, Itinerary>
                 {
                     { "1_walking", footItinerary }
                 };
+
+                // Publier l'itinéraire dans ActiveMQ
+                Console.WriteLine("Publication de l'itinéraire dans ActiveMQ...");
+                producer.SendMessage($"ItinerarySuggested", clientId, result);
+
+                return result;
+
             }
             else
             {
                 Console.WriteLine("\nCycling is the best option");
+                // Publier l'itinéraire dans ActiveMQ
+                Console.WriteLine("Publication de l'itinéraire dans ActiveMQ...");
+                producer.SendMessage($"ItinerarySuggested", clientId, bikeJourneyItineraries);
+
                 return bikeJourneyItineraries;
+
             }
         }
 
@@ -208,6 +230,7 @@ namespace RoutingServer
         }
 
         private Dictionary<string, (Station Station, Contract Contract)> computeClosestStations(Position startPosition, Position endPosition, List<Contract> contracts)
+
         {
             var closest = new Dictionary<string, (Station Station, Contract Contract)>
             {
@@ -227,6 +250,7 @@ namespace RoutingServer
                         (closest["Start"], minStartDistance) = ((station, contract), distance);
                     if (distance < minEndDistance && station.Status == "OPEN" && station.AvailableBikeStands > 0)
                         (closest["End"], minEndDistance) = ((station, contract), distance);
+
 
                 }
             }
@@ -414,6 +438,7 @@ namespace RoutingServer
 
             return earthRadiusKm * c;
         }
+
 
         private double DegreesToRadians(double degrees)
         {
