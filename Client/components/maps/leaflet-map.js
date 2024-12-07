@@ -80,7 +80,7 @@ class LeafletMap extends HTMLElement {
             maxZoom: 18,
         }).addTo(this.map);
 
-        this.addStartMarker(); // Ajoute le marqueur de départ
+        this.addStartMarker();
 
         this.subscribeToQueue();
 
@@ -140,7 +140,7 @@ class LeafletMap extends HTMLElement {
 
     addEndMarker() {
         const endIcon = L.icon({
-            iconUrl: "../../assets/icons/location-pin.png", // Icône pour la destination
+            iconUrl: "../../assets/icons/location-pin.png",
             iconSize: [40, 40],
         });
 
@@ -152,11 +152,9 @@ class LeafletMap extends HTMLElement {
 
     updateOriginMarker() {
         if (!this.start || !this.map) return;
-        // Si le marqueur existe déjà, mettez à jour sa position
         if (this.originMarker) {
-            this.originMarker.setLatLng(L.latLng(...this.start)); // Utilise `originMarker` ici
+            this.originMarker.setLatLng(L.latLng(...this.start));
         } else {
-            // Sinon, créez un nouveau marqueur avec l'icône de taxi et ajoutez-le à la carte
             this.addStartMarker();
         }
     }
@@ -232,9 +230,6 @@ class LeafletMap extends HTMLElement {
                     try {
                         const data = JSON.parse(message.body);
                         console.log('[ActiveMQ] Message received:', data);
-
-                        // On passe maintenant par une méthode qui récupère tous les itinéraires
-                        // puis les anime séquentiellement
                         this.handleAllItineraries(data);
 
                     } catch (error) {
@@ -250,11 +245,12 @@ class LeafletMap extends HTMLElement {
         client.activate();
     }
 
+    // Gestion de l'animation des itinéraires, 
+    //on affiche d'abord les itinéraires puis
+    // on les anime un par un
     async handleAllItineraries(itinerariesData) {
-        // Réinitialiser la file d'itinéraires
         this.itinerariesQueue = [];
     
-        // On stocke tous les itinéraires dans this.itinerariesQueue
         for (const key in itinerariesData) {
             if (itinerariesData.hasOwnProperty(key)) {
                 const itinerary = itinerariesData[key];
@@ -264,21 +260,18 @@ class LeafletMap extends HTMLElement {
             }
         }
     
-        // Afficher tous les itinéraires
         for (let i = 0; i < this.itinerariesQueue.length; i++) {
             const { type, itinerary } = this.itinerariesQueue[i];
             const coordinates = itinerary.instructions.map(step => [step.position.lat, step.position.lng]);
             this.displayRoute(coordinates, type);
         }
     
-        // Animer tous les itinéraires dans l'ordre
         for (let i = 0; i < this.itinerariesQueue.length; i++) {
             const { type, itinerary } = this.itinerariesQueue[i];
             const coordinates = itinerary.instructions.map(step => [step.position.lat, step.position.lng]);
             await this.animateRouteSequential(type, coordinates, itinerary.instructions);
         }
     
-        // Une fois tous les segments animés
         const instructionsDiv = this.shadowRoot.getElementById("instructions");
         instructionsDiv.textContent = "Vous êtes arrivé à destination !";
     }
@@ -321,7 +314,6 @@ class LeafletMap extends HTMLElement {
                 iconSize: [40, 40],
             });
     
-            // Supprimez l'ancien marqueur, si nécessaire
             if (this.cyclistMarker) {
                 this.map.removeLayer(this.cyclistMarker);
             }
@@ -348,7 +340,7 @@ class LeafletMap extends HTMLElement {
                     index++;
                 } else {
                     clearInterval(intervalId);
-                    resolve(); // L'animation de ce segment est terminée
+                    resolve();
                 }
             }, this.animationInterval);
         });
