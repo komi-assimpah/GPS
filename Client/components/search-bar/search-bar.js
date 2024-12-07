@@ -65,7 +65,7 @@ class SearchBar extends HTMLElement {
             } else {
                 this.suggestionsElement.style.display = "none"; // Masquer si moins de 3 caractères
             }
-        }, 500);
+        }, 300);
     }
 
     // Fonction pour récupérer les suggestions
