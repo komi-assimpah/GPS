@@ -23,6 +23,16 @@ main {
 aside {
   display: grid;
   grid-template-rows: 2fr 6fr;
+  transition: transform 0.3s ease-out;
+}
+
+aside.hidden {
+  transform: translateX(-100%);
+}
+
+/* Ajuster la grille quand aside est caché */
+body.fullmap {
+  grid-template-columns: 0fr 1fr;
 }
 
 .search-zone {

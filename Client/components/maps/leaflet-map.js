@@ -1,28 +1,71 @@
 class LeafletMap extends HTMLElement {
+    // Attributs observés
     static get observedAttributes() {
         return ["start", "end"];
     }
 
+    // Constantes et Configuration
+    static DEFAULT_START = [43.69676878749648, 7.2787016118204555];
+    static DEFAULT_ZOOM = 16;
+    static API_URL = "http://localhost:8733/Design_Time_Addresses/RoutingServer/Service1/suggestJourney";
+    static TILES_URL = "http://{s}.tile.osm.org/{z}/{x}/{y}.png";
+    static TILE_ATTRIBUTION = 'Leaflet &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors';
+    static ICON_SIZE = [40, 40];
+    static ANIMATION_INTERVAL = 100;    // Intervalle en ms pour l'animation des itinéraires
+    static TRANSITION_TIME = 30;        // Transition entre itinéraires en secondes(walking -> cycling)
+
+    // Icônes
+    static ICONS = {
+        start: "../../assets/icons/pin.png",
+        end: "../../assets/icons/location-pin.png",
+        walking: "../../assets/icons/walking.png",
+        cycling: "../../assets/icons/cycling.png",
+        default: "../../assets/icons/location.png"
+    };
+
     constructor() {
         super();
         this.attachShadow({ mode: "open" });
-        this.start = [43.69676878749648, 7.2787016118204555]; // Coordonnées de départ par defaut
+
+        this.start = LeafletMap.DEFAULT_START;
         this.end = null;
-
-        this.originMarker = null; 
+        this.originMarker = null;
         this.destMarker = null;
-        this.travelerMarker = null; 
-        this.animationInterval = 30; // Intervalle de mise à jour pour l'animation (en ms)
-
+        this.travelerMarker = null;
         this.scriptsLoaded = false;
         this.clientId = `client-${Math.random().toString(36).substring(2, 9)}`;
+        this.itinerariesQueue = [];
 
-        this.itinerariesQueue = []; // Pour stocker les itinéraires avant animation
-
-
+        this.initTemplate();
     }
 
-    async connectedCallback() {
+    connectedCallback() {
+        this.loadScript("../../leaflet-1.8.0/leaflet.js")
+            .then(() => {
+                this.scriptsLoaded = true;
+                this.initializeMap();
+                this.notifyDepartureSelected();
+            })
+            .catch((error) => {
+                console.error("Erreur lors de l'initialisation de la carte:", error);
+            });
+    }
+
+    attributeChangedCallback(name, oldValue, newValue) {
+        const value = JSON.parse(newValue);
+        if (name === "start") {
+            this.start = value;
+            this.updateStartPoint();
+        } else if (name === "end") {
+            this.end = value;
+            this.updateEndPoint();
+        }
+    }
+
+    // ---------------------------------------
+    // Initialisation du template et du style
+    // ---------------------------------------
+    initTemplate() {
         const template = document.createElement("template");
         template.innerHTML = `
           <link rel="stylesheet" href="../../leaflet-1.8.0/leaflet.css">
@@ -44,34 +87,32 @@ class LeafletMap extends HTMLElement {
             .instructions.hidden {
                 display: none;
             }
+            #remaining-time {
+                position: absolute; 
+                top: 10px; 
+                right: 10px; 
+                background-color: #21324B; 
+                color: #fff; 
+                padding: 15px 15px; 
+                border-radius: 8px; 
+                font-size: 14px; 
+                z-index: 1000;
+            }
+            #remaining-time.hidden {
+                display: none;
+            }
         </style>
+        
         <div id="map" style="width: 100%; height: 100vh;"></div>
         <div class="instructions hidden" id="instructions"></div>
-      `;
+        <div class="hidden" id="remaining-time">Remaining time : 0 min</div>
+        `;
         this.shadowRoot.appendChild(template.content.cloneNode(true));
-
-        try {
-            // Charger d'abord la carte
-            await this.loadScript("../../leaflet-1.8.0/leaflet.js");
-            this.scriptsLoaded = true;
-            this.loadMap();
-    
-            // Ensuite récupérer l'adresse et émettre l'événement
-            const departureAddress = await this.fetchAddressFromCoordinates(this.start[0], this.start[1]);
-            this.dispatchEvent(new CustomEvent("departure-selected", {
-                detail: {
-                    address: departureAddress,
-                    coordinates: [this.start[0], this.start[1]]
-                },
-                bubbles: true,
-                composed: true
-            }));
-            console.log("Adresse de départ récupérée :", departureAddress);
-        } catch (error) {
-            console.error("Erreur lors de l'initialisation de la carte:", error);
-        }
     }
 
+    // -----------------------------
+    // Chargement des scripts externes
+    // -----------------------------
     loadScript(src) {
         return new Promise((resolve, reject) => {
             const script = document.createElement("script");
@@ -82,324 +123,338 @@ class LeafletMap extends HTMLElement {
         });
     }
 
-    loadMap() {
+    // -------------------------------------------
+    // Initialisation et configuration de la carte
+    // -------------------------------------------
+    initializeMap() {
         if (!this.scriptsLoaded) return;
-
         const mapElement = this.shadowRoot.getElementById("map");
-        this.map = L.map(mapElement).setView(this.start, 16);
+        this.map = L.map(mapElement).setView(this.start, LeafletMap.DEFAULT_ZOOM);
 
-        L.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
-            attribution:'Leaflet &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors',
+        L.tileLayer(LeafletMap.TILES_URL, {
+            attribution: LeafletMap.TILE_ATTRIBUTION,
             maxZoom: 18,
         }).addTo(this.map);
 
-
-
         this.addStartMarker();
-
+        this.setupMapClickHandler();
         this.subscribeToQueue();
+    }
 
-        //when an address on the map is clicked destiionnation coordinates are updated
+    setupMapClickHandler() {
         this.map.on("click", async (event) => {
             const { lat, lng } = event.latlng;
-            console.log("click long", lng);
-            console.log("click lat", lat);
-
             this.end = [lat, lng];
             this.addEndMarker();
-            
-            this.setAttribute("end", JSON.stringify([lat, lng])); 
+            this.setAttribute("end", JSON.stringify([lat, lng]));
 
             const address = await this.fetchAddressFromCoordinates(lat, lng);
-
-            // Émettre un événement pour informer la `search-bar` de destination
             this.dispatchEvent(new CustomEvent("destination-selected", {
-                detail: {
-                    address: address,
-                    coordinates: [lat, lng]
-                },
+                detail: { address, coordinates: [lat, lng] },
                 bubbles: true,
                 composed: true
             }));
         });
     }
 
-    attributeChangedCallback(name, oldValue, newValue) {
-        const value = JSON.parse(newValue);
-        if (name === "start") {
-            this.start = value;
-            this.addStartMarker();
-            this.updateRoute();
-            if (this.map) {
-                this.map.setView(this.start, 16); // 16 est le niveau de zoom
-            }
-        } else if (name === "end") {
-            this.end = value;
-            this.addEndMarker();
-            this.updateRoute();
-            if (this.map) {
-                this.map.setView(this.end, 16); // 16 est le niveau de zoom
-            }
-        }
+    // -----------------------------------------
+    // Mise à jour des points de départ / arrivée
+    // -----------------------------------------
+    updateStartPoint() {
+        this.addStartMarker();
+        this.updateRoute();
+        if (this.map) this.map.setView(this.start, LeafletMap.DEFAULT_ZOOM);
+    }
+
+    updateEndPoint() {
+        this.addEndMarker();
+        this.updateRoute();
+        if (this.map) this.map.setView(this.end, LeafletMap.DEFAULT_ZOOM);
+    }
+
+    // ---------------------------
+    // Gestion des marqueurs
+    // ---------------------------
+    createMarkerIcon(iconUrl) {
+        return L.icon({ iconUrl, iconSize: LeafletMap.ICON_SIZE });
     }
 
     addStartMarker() {
-        const startIcon = L.icon({
-            iconUrl: "../../assets/icons/pin.png",
-            iconSize: [40, 40],
-        });
-
-        if (this.originMarker) {
-            this.map.removeLayer(this.originMarker);
-        }
+        if (this.originMarker) this.map.removeLayer(this.originMarker);
+        const startIcon = this.createMarkerIcon(LeafletMap.ICONS.start);
         this.originMarker = L.marker(this.start, { icon: startIcon }).addTo(this.map);
     }
 
     addEndMarker() {
-        const endIcon = L.icon({
-            iconUrl: "../../assets/icons/location-pin.png",
-            iconSize: [40, 40],
-        });
-
-        if (this.destMarker) {
-            this.map.removeLayer(this.destMarker);
-        }
+        if (this.destMarker) this.map.removeLayer(this.destMarker);
+        const endIcon = this.createMarkerIcon(LeafletMap.ICONS.end);
         this.destMarker = L.marker(this.end, { icon: endIcon }).addTo(this.map);
     }
 
-    updateOriginMarker() {
-        if (!this.start || !this.map) return;
-        if (this.originMarker) {
-            this.originMarker.setLatLng(L.latLng(...this.start));
-        } else {
-            this.addStartMarker();
-        }
-    }
-
+    // ---------------------------
+    // Récupération et affichage de l'itinéraire
+    // ---------------------------
     updateRoute() {
-        if (!this.start || !this.end){
+        if (!this.start || !this.end) {
             console.error("Erreur : les coordonnées de départ ou d'arrivée sont manquantes.");
             return;
         }
 
-        const url = `http://localhost:8733/Design_Time_Addresses/RoutingServer/Service1/suggestJourney?startLat=${this.start[0]}&startLng=${this.start[1]}&endLat=${this.end[0]}&endLng=${this.end[1]}&clientId=${this.clientId}`;
-    
-        console.log("Départ :", this.start);
-        console.log("Arrivée :", this.end);
-        console.log("clientId :", this.clientId);
-        console.log("Requête envoyée à :", url);
+        const url = `${LeafletMap.API_URL}?startLat=${this.start[0]}&startLng=${this.start[1]}&endLat=${this.end[0]}&endLng=${this.end[1]}&clientId=${this.clientId}`;
+        console.log("Requête Itinéraire:", url);
 
         fetch(url)
             .then((response) => {
-                if (!response.ok) {
-                    console.error("Erreur HTTP :", response.status);
-                    throw new Error(`Erreur HTTP : ${response.status}`);
-                }
-                console.log("response eeh", response);
+                if (!response.ok) throw new Error(`Erreur HTTP : ${response.status}`);
                 return response.json();
             })
-            .then((data) => {
-                console.log("response data eeh", data);
-                if (
-                    !data.suggestJourneyResult ||
-                    data.suggestJourneyResult.length === 0 ||
-                    !data.suggestJourneyResult[0].Value ||
-                    !data.suggestJourneyResult[0].Value.instructions ||
-                    data.suggestJourneyResult[0].Value.instructions.length === 0
-                ) {
-                    throw new Error("Aucun itinéraire trouvé ou données invalides.");
-                }
-
-                const route = data.suggestJourneyResult[0].Value;
-                console.log("Données de l'itinéraire récupérées :", route);
-    
-
-    
-                if (this.destMarker) {
-                    this.destMarker.addTo(this.map);
-                }
-            })
+            .then((data) => this.handleRouteData(data))
             .catch((error) => {
                 console.error("Erreur lors de la récupération de l'itinéraire :", error);
             });
     }
 
+    handleRouteData(data) {
+        if (!data.suggestJourneyResult ||
+            data.suggestJourneyResult.length === 0 ||
+            !data.suggestJourneyResult[0].Value ||
+            !data.suggestJourneyResult[0].Value.instructions ||
+            data.suggestJourneyResult[0].Value.instructions.length === 0) {
+            console.error("Aucun itinéraire trouvé ou données invalides.");
+            return;
+        }
+        const route = data.suggestJourneyResult[0].Value;
+        console.log("Itinéraire récupéré :", route);
+        if (this.destMarker) this.destMarker.addTo(this.map);
+    }
+
+    // -------------------------------
+    // Gestion de la file d'itinéraires
+    // -------------------------------
     subscribeToQueue() {
         const client = new StompJs.Client({
             brokerURL: 'ws://localhost:61614',
-            connectHeaders: {
-                login: 'user',
-                passcode: 'password',
-            },
-            debug: function (str) {
-                console.log(str);
-            },
+            connectHeaders: { login: 'user', passcode: 'password' },
+            debug: (str) => console.log(str),
             reconnectDelay: 5000,
             heartbeatIncoming: 4000,
             heartbeatOutgoing: 4000,
         });
 
         client.onConnect = (frame) => {
-            console.log('Connected to ActiveMQ:', frame);
-
+            console.log('Connecté à ActiveMQ:', frame);
             client.subscribe(`/queue/ItinerarySuggested-${this.clientId}`, (message) => {
                 if (message.body) {
                     try {
                         const data = JSON.parse(message.body);
-                        console.log('[ActiveMQ] Message received:', data);
+                        console.log('[ActiveMQ] Message reçu:', data);
                         this.handleAllItineraries(data);
-
                     } catch (error) {
-                        console.error('[ActiveMQ] Error processing message:', error);
+                        console.error('[ActiveMQ] Erreur de traitement du message:', error);
                     }
                 }
             });
         };
+
         client.onStompError = (frame) => {
-            console.error('[ActiveMQ] Broker error:', frame.headers['message']);
-            console.error('[ActiveMQ] Details:', frame.body);
+            console.error('[ActiveMQ] Erreur du broker:', frame.headers['message']);
+            console.error('[ActiveMQ] Détails:', frame.body);
         };
+
         client.activate();
     }
 
-    // Gestion de l'animation des itinéraires, 
-    //on affiche d'abord les itinéraires puis
-    // on les anime un par un
+    /**
+     * Traite tous les itinéraires reçus, 
+     * les affiche, calcule les durées, et lance les animations séquentielles.
+     */
     async handleAllItineraries(itinerariesData) {
-        this.itinerariesQueue = [];
+        // if(!itinerariesData){
+        //     const instructionsDiv = this.shadowRoot.getElementById("instructions");
+        //     instructionsDiv.classList.remove("hidden");
+        //     instructionsDiv.textContent = "Aucun itinéraire trouvé pour cette destination.";
+            
+        //     // Mettre à jour l'affichage du temps
+        //     const timeElement = this.shadowRoot.getElementById("remaining-time");
+        //     timeElement.textContent = "Temps total : - min";
     
+        //     // Attendre quelques secondes puis réinitialiser
+        //     setTimeout(() => {
+        //         this.resetMap();
+        //     }, 4000);
+            
+        //     return;
+        // }
+
+        document.querySelector('aside').classList.add('hidden');
+        document.body.classList.add('fullmap');
+
+        this.itinerariesQueue = [];
+        let totalDuration = 0;
+        const durationsInfo = [];
+
+        // Préparation des itinéraires
         for (const key in itinerariesData) {
-            if (itinerariesData.hasOwnProperty(key)) {
-                const itinerary = itinerariesData[key];
-                if (itinerary.instructions && itinerary.instructions.length > 0) {
-                    this.itinerariesQueue.push({ type: key, itinerary });
-                }
+            if (!itinerariesData.hasOwnProperty(key)) continue;
+
+            const itinerary = itinerariesData[key];
+            if (itinerary.instructions && itinerary.instructions.length > 0) {
+                if (totalDuration > 0) totalDuration += LeafletMap.TRANSITION_TIME;
+
+                const duration = itinerary.instructions.reduce((sum, step) => sum + step.duration, 0);
+                durationsInfo.push({ type: key, startTime: totalDuration, endTime: totalDuration + duration });
+
+                totalDuration += duration;
+                this.itinerariesQueue.push({
+                    type: key,
+                    itinerary,
+                    startTime: durationsInfo[durationsInfo.length - 1].startTime,
+                    duration
+                });
             }
         }
-    
-        // Afficher les itinéraires
-        for (let i = 0; i < this.itinerariesQueue.length; i++) {
-            const { type, itinerary } = this.itinerariesQueue[i];
-            const coordinates = itinerary.instructions.map(step => [step.position.lat, step.position.lng]);
-            this.displayRoute(coordinates, type);
-        }
-    
-        // Animer les itinéraires
-        for (let i = 0; i < this.itinerariesQueue.length; i++) {
-            const { type, itinerary } = this.itinerariesQueue[i];
-            const coordinates = itinerary.instructions.map(step => [step.position.lat, step.position.lng]);
-            await this.animateRouteSequential(type, coordinates, itinerary.instructions);
-        }
-    
+        
+
+        const remainingTimeElement = this.shadowRoot.getElementById("remaining-time");
+        remainingTimeElement.classList.remove("hidden");
+
+        this.updateRemainingTime(totalDuration);
+        this.displayAllRoutes();
+        await this.animateAllItineraries(totalDuration);
+
+        // Arrivé à destination
         const instructionsDiv = this.shadowRoot.getElementById("instructions");
-        instructionsDiv.textContent = "Vous êtes arrivé à destination !";
+        instructionsDiv.textContent = "Destination reached !!";
+        this.updateRemainingTime(0);
+
+            // Cacher le temps restant à la fin
+        remainingTimeElement.classList.add("hidden");
 
 
-
-        //attendre 5 secondes avant de réinitialiser la carte
         setTimeout(() => {
             this.resetMap();
         }, 4000);
-        
-
     }
 
-    displayRoute(coordinates, type) {
-        console.log(`[displayRoute] Drawing route of type '${type}'`);
-    
-        let colorOfItinerary = "red";
-        if (type.includes("cycling")) {
-            colorOfItinerary = "blue";
+    /**
+     * Affiche tous les itinéraires (tous types confondus) sur la carte.
+     */
+    displayAllRoutes() {
+        if (!this.routeLayers) this.routeLayers = [];
+        for (let { type, itinerary } of this.itinerariesQueue) {
+            const coordinates = itinerary.instructions.map(step => [step.position.lat, step.position.lng]);
+            this.displayRoute(coordinates, type);
         }
 
-        const latLngs = coordinates.map((coord) => L.latLng(coord[0], coord[1]));
-
-        if (!this.routeLayers) {
-            this.routeLayers = [];
-        }
-
-        const routeLayer = L.polyline(latLngs, { color: colorOfItinerary }).addTo(this.map);
-        this.routeLayers.push(routeLayer);
-
-        // On ajuste la vue pour montrer tous les itinéraires affichés
-        const allBounds = this.routeLayers.reduce((bounds, layer) => bounds.extend(layer.getBounds()), L.latLngBounds());
+        const allBounds = this.routeLayers.reduce(
+            (bounds, layer) => bounds.extend(layer.getBounds()),
+            L.latLngBounds()
+        );
         this.map.fitBounds(allBounds);
     }
 
-    animateRouteSequential(type, coordinates, steps) {
+    /**
+     * Affiche un itinéraire individuel.
+     */
+    displayRoute(coordinates, type) {
+        console.log(`[displayRoute] Tracé de l'itinéraire du type '${type}'`);
+        const color = type.includes("cycling") ? "blue" : "red";
+        const latLngs = coordinates.map(coord => L.latLng(coord[0], coord[1]));
+        const routeLayer = L.polyline(latLngs, { color }).addTo(this.map);
+        this.routeLayers.push(routeLayer);
+    }
+
+    /**
+     * Anime tous les itinéraires de manière séquentielle
+     */
+    async animateAllItineraries(totalDuration) {
+        const startTime = Date.now();
+
+        for (const queueItem of this.itinerariesQueue) {
+            const steps = queueItem.itinerary.instructions;
+            const coordinates = steps.map(step => [step.position.lat, step.position.lng]);
+
+            await this.animateSingleItinerary(
+                queueItem.type,
+                coordinates,
+                steps,
+                startTime,
+                totalDuration,
+                queueItem.startTime,
+                queueItem.duration
+            );
+        }
+    }
+
+    /**
+     * Anime un itinéraire unique du début à la fin.
+     */
+    animateSingleItinerary(type, coordinates, steps, startTime, totalDuration, segmentStartTime, segmentDuration) {
         return new Promise((resolve) => {
-            let iconUrl;
-            if (type.includes("walking")) {
-                iconUrl = "../../assets/icons/walking.png";
-            } else if (type.includes("cycling")) {
-                iconUrl = "../../assets/icons/cycling.png";
-            } else {
-                iconUrl = "../../assets/icons/location.png";
-            }
-    
-            const markerIcon = L.icon({
-                iconUrl: iconUrl,
-                iconSize: [40, 40],
-            });
-    
-            if (this.travelerMarker) {
-                this.map.removeLayer(this.travelerMarker);
-            }
-    
-            this.travelerMarker = L.marker(coordinates[0], { icon: markerIcon }).addTo(this.map);
-        
-            let index = 0;
-            let stepIndex = 0;
-        
+            const iconUrl = type.includes("walking") ? LeafletMap.ICONS.walking :
+                            type.includes("cycling") ? LeafletMap.ICONS.cycling :
+                            LeafletMap.ICONS.default;
+
+            if (this.travelerMarker) this.map.removeLayer(this.travelerMarker);
+            this.travelerMarker = L.marker(coordinates[0], { icon: this.createMarkerIcon(iconUrl) }).addTo(this.map);
+
             const instructionsDiv = this.shadowRoot.getElementById("instructions");
             instructionsDiv.classList.remove("hidden");
-        
+
+            let index = 0;
+            let stepIndex = 0;
+            const stepDuration = segmentDuration / coordinates.length; // Pour un déplacement plus fluide
+
             const intervalId = setInterval(() => {
                 if (index < coordinates.length) {
                     const [lat, lng] = coordinates[index];
                     this.travelerMarker.setLatLng([lat, lng]);
-        
                     this.map.setView([lat, lng], this.map.getZoom(), { animate: true });
 
-
+                    // Affichage de l'instruction correspondante
                     if (stepIndex < steps.length && index >= stepIndex) {
-                        const step = steps[stepIndex];
-                        instructionsDiv.textContent = `Étape ${stepIndex + 1}: ${step.text}`;
+                        instructionsDiv.textContent = `Étape ${stepIndex + 1}: ${steps[stepIndex].text}`;
                         stepIndex++;
                     }
-        
+
+                    // Mise à jour du temps restant
+                    const elapsedTime = (Date.now() - startTime) / 1000;
+                    const currentSegmentProgress = index * stepDuration;
+                    const totalElapsedTime = segmentStartTime + currentSegmentProgress;
+                    const remainingTime = Math.max(0, totalDuration - totalElapsedTime);
+                    this.updateRemainingTime(remainingTime);
+
                     index++;
                 } else {
                     clearInterval(intervalId);
                     resolve();
                 }
-            }, this.animationInterval);
+            }, LeafletMap.ANIMATION_INTERVAL);
         });
     }
-    
 
-    displaySteps(steps) {
-        const instructionsDiv = this.shadowRoot.getElementById("instructions");
+    // ---------------------------
+    // Mise à jour du temps restant
+    // ---------------------------
+    updateRemainingTime(totalRemainingSeconds) {
+        const timeElement = this.shadowRoot.getElementById("remaining-time");
 
-        if(steps.length > 0){
-            instructionsDiv.textContent = `Étape 1: ${steps[0].text}`;
-            instructionsDiv.classList.remove("hidden");
-            instructionsDiv.innerHTML = "";
+        if (totalRemainingSeconds >= 3600) {
+            const hours = Math.floor(totalRemainingSeconds / 3600);
+            const minutes = Math.ceil((totalRemainingSeconds % 3600) / 60);
+            console.log("Temps restant :", hours, "h", minutes, "min");
+            timeElement.textContent = `Remaining time : ${hours}h ${minutes}min`;
         } else {
-            instructionsDiv.textContent = "Aucune pas de route trouvée";
+            const minutes = Math.ceil(totalRemainingSeconds / 60);
+            console.log("Temps restant :", minutes, "min");
+            timeElement.textContent = `Remaining time : ${minutes}min`;
         }
 
-        console.log(`Distance: ${steps.distance} mètres`);
-        console.log(`Durée: ${steps.duration} secondes`);
-        steps.forEach((step, index) => {
-            instructionsDiv.textContent = `Étape 1: ${steps[0].text}`;
-            console.log(`Étape ${index + 1}:`);
-            console.log(`Instructions: ${step.text}`);
-            console.log('step lat', step.position.lat);
-            console.log('step lng', step.position.lng);
-        });
     }
 
+    // -----------------------------------------
+    // Récupération d'une adresse depuis lat/lon
+    // -----------------------------------------
     async fetchAddressFromCoordinates(lat, lon) {
         const url = `https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`;
         try {
@@ -407,8 +462,7 @@ class LeafletMap extends HTMLElement {
             const data = await response.json();
 
             if (data.features && data.features.length > 0) {
-                const address = data.features[0].properties.label;
-                return address;
+                return data.features[0].properties.label;
             } else {
                 console.warn("Aucune adresse trouvée pour ces coordonnées.");
                 return "Adresse inconnue";
@@ -419,29 +473,53 @@ class LeafletMap extends HTMLElement {
         }
     }
 
+    /**
+     * Notifie l'élément parent que la position de départ est définie
+     */
+    async notifyDepartureSelected() {
+        const departureAddress = await this.fetchAddressFromCoordinates(this.start[0], this.start[1]);
+        this.dispatchEvent(new CustomEvent("departure-selected", {
+            detail: {
+                address: departureAddress,
+                coordinates: [this.start[0], this.start[1]]
+            },
+            bubbles: true,
+            composed: true
+        }));
+        console.log("Adresse de départ récupérée :", departureAddress);
+    }
+
+    /**
+     * Réinitialise la carte et les marqueurs une fois que l'itinéraire est terminé.
+     */
     resetMap() {
         [this.originMarker, this.destMarker, this.travelerMarker].forEach(marker => {
             if (marker) this.map.removeLayer(marker);
         });
-    
+
         if (this.routeLayers) {
             this.routeLayers.forEach(layer => this.map.removeLayer(layer));
             this.routeLayers = [];
         }
-    
+
         this.start = null;
         this.end = null;
 
-
-        // Réinitialiser les coordonnées de départ et d'arrivée
-        //et contenu dans le front
+        // Émission d'un événement pour réinitialiser les barres de recherche
         this.dispatchEvent(new CustomEvent("reset-search-bars", {
             detail: {},
             bubbles: true,
             composed: true
         }));
+
+        // Réinitialiser l'affichage du temps restant
+        const timeElement = this.shadowRoot.getElementById("remaining-time");
+        timeElement.classList.add("hidden");
+        timeElement.textContent = "Remaining time : 0 min";
+
+        document.querySelector('aside').classList.remove('hidden');
+        document.body.classList.remove('fullmap');
     }
-    
 }
 
 customElements.define("leaflet-map", LeafletMap);
