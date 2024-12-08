@@ -77,7 +77,7 @@ Run the executables `ProxyCache` and `RoutingServer`. If they are not available,
 
 Navigate to the light client directory:
 ```
-..\GPS\Client
+..\GPS\Client\light-client
 ```
 
 Execute the command:

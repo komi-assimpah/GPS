@@ -231,7 +231,7 @@ class LeafletMap extends HTMLElement {
         }
 
         const url = `${LeafletMap.API_URL}?startLat=${this.start[0]}&startLng=${this.start[1]}&endLat=${this.end[0]}&endLng=${this.end[1]}&clientId=${this.clientId}`;
-        console.log("Requête Itinéraire:", url);
+        //console.log("Requête Itinéraire:", url);
 
         fetch(url)
             .then((response) => {
@@ -254,7 +254,7 @@ class LeafletMap extends HTMLElement {
             return;
         }
         const route = data.suggestJourneyResult[0].Value;
-        console.log("Itinéraire récupéré :", route);
+        //console.log("Itinéraire récupéré :", route);
         if (this.destMarker) this.destMarker.addTo(this.map);
     }
 
@@ -272,12 +272,12 @@ class LeafletMap extends HTMLElement {
         });
 
         client.onConnect = (frame) => {
-            console.log('Connecté à ActiveMQ:', frame);
+            //console.log('Connecté à ActiveMQ:', frame);
             client.subscribe(`/queue/ItinerarySuggested-${this.clientId}`, (message) => {
                 if (message.body) {
                     try {
                         const data = JSON.parse(message.body);
-                        console.log('[ActiveMQ] Message reçu:', data);
+                        //console.log('[ActiveMQ] Message reçu:', data);
                         this.handleAllItineraries(data);
                     } catch (error) {
                         console.error('[ActiveMQ] Erreur de traitement du message:', error);
@@ -385,7 +385,7 @@ class LeafletMap extends HTMLElement {
      * Affiche un itinéraire individuel.
      */
     displayRoute(coordinates, type) {
-        console.log(`[displayRoute] Tracé de l'itinéraire du type '${type}'`);
+        //console.log(`[displayRoute] Tracé de l'itinéraire du type '${type}'`);
         const color = type.includes("cycling") ? "blue" : "red";
         const latLngs = coordinates.map(coord => L.latLng(coord[0], coord[1]));
         const routeLayer = L.polyline(latLngs, { color }).addTo(this.map);
@@ -470,11 +470,11 @@ class LeafletMap extends HTMLElement {
         if (totalRemainingSeconds >= 3600) {
             const hours = Math.floor(totalRemainingSeconds / 3600);
             const minutes = Math.ceil((totalRemainingSeconds % 3600) / 60);
-            console.log("Temps restant :", hours, "h", minutes, "min");
+            //console.log("Temps restant :", hours, "h", minutes, "min");
             timeElement.textContent = `Remaining time : ${hours}h ${minutes}min`;
         } else {
             const minutes = Math.ceil(totalRemainingSeconds / 60);
-            console.log("Temps restant :", minutes, "min");
+            //console.log("Temps restant :", minutes, "min");
             timeElement.textContent = `Remaining time : ${minutes}min`;
         }
 
@@ -514,7 +514,7 @@ class LeafletMap extends HTMLElement {
             bubbles: true,
             composed: true
         }));
-        console.log("Adresse de départ récupérée :", departureAddress);
+        //console.log("Adresse de départ récupérée :", departureAddress);
     }
 
     /**
