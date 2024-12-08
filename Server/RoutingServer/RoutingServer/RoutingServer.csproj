@@ -6,8 +6,9 @@
     <ProductVersion>8.0.50727</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{F53F0430-6F82-44D7-A040-4D11FAD2E8AF}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <OutputType>Exe</OutputType>
+	<StartupObject>RoutingServer.Program</StartupObject>
+	  <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>RoutingServer</RootNamespace>
     <AssemblyName>RoutingServer</AssemblyName>
     <ProjectTypeGuids>{3D9AD99F-2412-4246-B90B-4EAA41C64699};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>

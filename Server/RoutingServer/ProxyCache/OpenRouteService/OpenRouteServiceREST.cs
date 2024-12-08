@@ -77,6 +77,7 @@ namespace ProxyCache.OpenStreetMap
                 string move = (string)step.Instruction;
                 string name = (string)step.Name ?? "Unknown road";
                 double distance = (double)step.Distance;
+                double duration = (double)step.Duration;
 
                 string instruction = $"{move} on {name} for {distance} meters";
 
@@ -90,9 +91,7 @@ namespace ProxyCache.OpenStreetMap
                     Lng = lng
                 };
 
-                instructions.Add(
-                    new Instruction { Text = instruction, Position = position }
-                );
+                instructions.Add(new Instruction { Text = instruction, Position = position, Duration = duration });
             }
 
             return instructions;

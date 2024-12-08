@@ -25,6 +25,9 @@ namespace ProxyCache.Models
 
         [DataMember(Name = "position")]
         public Position Position { get; set; }
+
+        [DataMember(Name = "duration")]
+        public double Duration { get; set; }
     }
 
     [DataContract]

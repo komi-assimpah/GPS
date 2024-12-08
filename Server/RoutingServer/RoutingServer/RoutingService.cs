@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.ServiceModel;
 using System.ServiceModel.Web;
 using System.Threading.Tasks;
 using ProxyCache.Models;
@@ -15,7 +16,22 @@ namespace RoutingServer
 
         public RoutingService()
         {
-            client = new ProxyServiceReference.ProxyServiceClient();
+            // Configuration programmatique du client
+            var binding = new BasicHttpBinding
+            {
+                MaxReceivedMessageSize = 2147483647,
+                ReaderQuotas = new System.Xml.XmlDictionaryReaderQuotas
+                {
+                    MaxDepth = 32,
+                    MaxStringContentLength = 2147483647,
+                    MaxArrayLength = 2147483647,
+                    MaxBytesPerRead = 4096,
+                    MaxNameTableCharCount = 16384
+                }
+            };
+
+            var address = new EndpointAddress("http://localhost:8733/Design_Time_Addresses/ProxyCache/ProxyService/");
+            client = new ProxyServiceReference.ProxyServiceClient(binding, address);
             producer = new ActiveMqProducer();
         }
 
@@ -41,6 +57,11 @@ namespace RoutingServer
             Console.WriteLine("\nPlanning cycling journey...");
             // Planification de l'itinéraire en vélo
             var cyclingItineraries = PlanCyclingJourney(startPosition, endPosition, footItinerary);
+
+            if (footItinerary != null)
+            {
+                Console.WriteLine($"Temps estimé : {FormatDuration(footItinerary.Duration)}");
+            }
 
             // Déterminer la meilleure option entre marcher ou faire du vélo
             return DetermineBestOption(clientId, footItinerary, cyclingItineraries);
@@ -156,14 +177,6 @@ namespace RoutingServer
             }
         }
 
-        // Trouve les stations les plus proches pour le départ et l'arrivée
-        /*private (StationInfo Start, StationInfo End) FindClosestStations(Position start, Position end, List<Contract> contracts)
-        {
-            var closestStart = FindClosestStation(start, contracts, true);
-            var closestEnd = FindClosestStation(end, contracts, false);
-
-            return (closestStart, closestEnd);
-        }*/
 
         // Trouve les stations les plus proches pour le départ et l'arrivée, tout en vérifiant qu'elles appartiennent au même contrat
         private (StationInfo Start, StationInfo End) FindClosestStations(Position start, Position end, List<Contract> contracts)
@@ -212,33 +225,6 @@ namespace RoutingServer
         }
 
 
-
-        // Recherche la station la plus proche pour une position donnée
-        private StationInfo FindClosestStation(Position position, List<Contract> contracts, bool findBikeStations)
-        {
-            double minDistance = double.MaxValue;
-            Station closestStation = null;
-            Contract closestContract = null;
-
-            foreach (var contract in contracts)
-            {
-                foreach (var station in GetStations(contract.Name))
-                {
-                    if (IsStationValid(station, findBikeStations))
-                    {
-                        var distance = CalculateDistance(position, station.Position);
-                        if (distance < minDistance)
-                        {
-                            minDistance = distance;
-                            closestStation = station;
-                            closestContract = contract;
-                        }
-                    }
-                }
-            }
-
-            return new StationInfo(closestStation, closestContract);
-        }
 
         // Vérifie si une station est valide (ouverte et disponible pour vélos ou stands)
         //bool findBikeStations: true pour les stations de vélos, false pour les stations de stands
@@ -297,6 +283,12 @@ namespace RoutingServer
             {
                 Console.WriteLine($"Error publishing itinerary to ActiveMQ: {ex.Message}");
             }
+        }
+
+        public static string FormatDuration(double seconds)
+        {
+            TimeSpan time = TimeSpan.FromSeconds(seconds);
+            return $"{(int)time.TotalHours}h {time.Minutes}min {time.Seconds}s";
         }
     }
 
