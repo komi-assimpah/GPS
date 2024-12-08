@@ -118,8 +118,8 @@ namespace RoutingServer
         {
             return new Position
             {
-                Lat = double.Parse(lat.Trim(',')),
-                Lng = double.Parse(lng.Trim(','))
+                Lat = double.Parse(lat.Trim(','), CultureInfo.InvariantCulture),
+                Lng = double.Parse(lng.Trim(','), CultureInfo.InvariantCulture)
             };
         }
 
