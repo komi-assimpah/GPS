@@ -1,20 +1,17 @@
 class LeafletMap extends HTMLElement {
-    // Attributs observés
     static get observedAttributes() {
         return ["start", "end"];
     }
 
-    // Constantes et Configuration
     static DEFAULT_START = [43.69676878749648, 7.2787016118204555];
-    static DEFAULT_ZOOM = 16;
+    static DEFAULT_ZOOM = 14; //pls petit = plus zoomé
     static API_URL = "http://localhost:8733/Design_Time_Addresses/RoutingServer/Service1/suggestJourney";
     static TILES_URL = "http://{s}.tile.osm.org/{z}/{x}/{y}.png";
     static TILE_ATTRIBUTION = 'Leaflet &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors';
     static ICON_SIZE = [40, 40];
-    static ANIMATION_INTERVAL = 100;    // Intervalle en ms pour l'animation des itinéraires
+    static ANIMATION_INTERVAL = 300;    // plus petit = plus rapide
     static TRANSITION_TIME = 30;        // Transition entre itinéraires en secondes(walking -> cycling)
 
-    // Icônes
     static ICONS = {
         start: "../../assets/icons/pin.png",
         end: "../../assets/icons/location-pin.png",
@@ -37,6 +34,7 @@ class LeafletMap extends HTMLElement {
         this.itinerariesQueue = [];
 
         this.initTemplate();
+        this.getCurrentPosition();
     }
 
     connectedCallback() {
@@ -62,6 +60,35 @@ class LeafletMap extends HTMLElement {
         }
     }
 
+
+
+    // ------------------------------------------------------
+    // Récupération de la position actuelle de l'utilisateur
+    // -------------------------------------------------------
+    getCurrentPosition() {
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    this.start = [position.coords.latitude, position.coords.longitude];
+                    if (this.map) {
+                        this.map.setView(this.start, LeafletMap.DEFAULT_ZOOM);
+                        this.updateStartPoint();
+                        this.notifyDepartureSelected();
+                    }
+                },
+                (error) => {
+                    console.warn("Erreur de géolocalisation:", error);
+                    // Garde la position par défaut en cas d'erreur
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 5000,
+                    maximumAge: 0
+                }
+            );
+        }
+    }
+
     // ---------------------------------------
     // Initialisation du template et du style
     // ---------------------------------------
@@ -73,16 +100,19 @@ class LeafletMap extends HTMLElement {
             .instructions {
                 position: absolute;
                 bottom: 15px;
-                left: 70%;
+                left: 50%;
                 transform: translateX(-50%);
                 background-color: #78B9BA;
                 color: black;
-                padding: 10px;
+                padding: 15px 20px;
                 border-radius: 8px;
-                font-size: 18px;
-                max-width: 100%;
+                font-size: 22px;
+                min-width: 300px; 
+                width: 80%; 
+                max-width: 800px;
                 text-align: center;
                 z-index: 1000;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* Ajout d'une ombre pour meilleure visibilité */
             }
             .instructions.hidden {
                 display: none;
@@ -286,8 +316,6 @@ class LeafletMap extends HTMLElement {
         //     return;
         // }
 
-        document.querySelector('aside').classList.add('hidden');
-        document.body.classList.add('fullmap');
 
         this.itinerariesQueue = [];
         let totalDuration = 0;
@@ -314,6 +342,9 @@ class LeafletMap extends HTMLElement {
             }
         }
         
+        
+        document.querySelector('aside').classList.add('hidden');
+        document.body.classList.add('fullmap');
 
         const remainingTimeElement = this.shadowRoot.getElementById("remaining-time");
         remainingTimeElement.classList.remove("hidden");
@@ -413,7 +444,7 @@ class LeafletMap extends HTMLElement {
 
                     // Affichage de l'instruction correspondante
                     if (stepIndex < steps.length && index >= stepIndex) {
-                        instructionsDiv.textContent = `Étape ${stepIndex + 1}: ${steps[stepIndex].text}`;
+                        instructionsDiv.textContent = `Step ${stepIndex + 1}: ${steps[stepIndex].text}`;
                         stepIndex++;
                     }
 
