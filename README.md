@@ -17,7 +17,7 @@ It leverages both the **JCDecaux API** and the **OpenRouteService API** to deliv
 
 **🎥 Demonstration Video**  
 You can view a demonstration of the application here:  
-https://github.com/komi-assimpah/GPS/assets/LetsGoBiking.mp4
+https://github.com/komi-assimpah/GPS/blob/main/Client/assets/LetsGoBiking.mp4
 
 ### 💻 Heavy Client
 
