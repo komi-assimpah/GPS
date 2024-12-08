@@ -358,9 +358,6 @@ class LeafletMap extends HTMLElement {
         instructionsDiv.textContent = "Destination reached !!";
         this.updateRemainingTime(0);
 
-            // Cacher le temps restant à la fin
-        remainingTimeElement.classList.add("hidden");
-
 
         setTimeout(() => {
             this.resetMap();
@@ -547,6 +544,11 @@ class LeafletMap extends HTMLElement {
         const timeElement = this.shadowRoot.getElementById("remaining-time");
         timeElement.classList.add("hidden");
         timeElement.textContent = "Remaining time : 0 min";
+
+        instructionsDiv.classList.add("hidden");
+        if (instructionsDiv) instructionsDiv.classList.add("hidden");
+        if (timeElement) timeElement.classList.add("hidden");
+
 
         document.querySelector('aside').classList.remove('hidden');
         document.body.classList.remove('fullmap');
