@@ -18,12 +18,9 @@ It leverages both the **JCDecaux API** and the **OpenRouteService API** to deliv
 **🎥 Demonstration Video**  
 You can view a demonstration of the application here:  
 
-[Voir la vidéo](./Client/assets/LetsGoBiking.mp4)
+https://github.com/user-attachments/assets/09b40f71-2fe4-49e0-b0ee-7ed37724e58c
 
-<video width="320" height="240" controls>
-  <source src="./Client/assets/LetsGoBiking.mp4" type="video/mp4">
-  Votre navigateur ne supporte pas la balise vidéo.
-</video>
+
 
 
 ### 💻 Heavy Client
