@@ -9,7 +9,7 @@ class LeafletMap extends HTMLElement {
     static TILES_URL = "http://{s}.tile.osm.org/{z}/{x}/{y}.png";
     static TILE_ATTRIBUTION = 'Leaflet &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors';
     static ICON_SIZE = [40, 40];
-    static ANIMATION_INTERVAL = 300;    // plus petit = plus rapide
+    static ANIMATION_INTERVAL = 100;    // plus petit = plus rapide
     static TRANSITION_TIME = 30;        // Transition entre itinéraires en secondes(walking -> cycling)
 
     static ICONS = {
@@ -524,35 +524,43 @@ class LeafletMap extends HTMLElement {
         [this.originMarker, this.destMarker, this.travelerMarker].forEach(marker => {
             if (marker) this.map.removeLayer(marker);
         });
-
+    
         if (this.routeLayers) {
             this.routeLayers.forEach(layer => this.map.removeLayer(layer));
             this.routeLayers = [];
         }
-
-        this.start = null;
+    
+        this.start = LeafletMap.DEFAULT_START;
         this.end = null;
-
-        // Émission d'un événement pour réinitialiser les barres de recherche
+        this.getCurrentPosition();
+    
+        // Réinitialiser l'affichage du temps restant
+        const timeElement = this.shadowRoot.getElementById("remaining-time");
+        timeElement.classList.add("hidden");
+        timeElement.textContent = "Remaining time : 0 min";
+    
+        // Récupération du div des instructions avant utilisation
+        const instructionsDiv = this.shadowRoot.getElementById("instructions");
+        if (instructionsDiv) {
+            instructionsDiv.classList.add("hidden");
+        }
+    
+        if (timeElement) timeElement.classList.add("hidden");
+    
+        document.querySelector('aside').classList.remove('hidden');
+        document.body.classList.remove('fullmap');
+    
         this.dispatchEvent(new CustomEvent("reset-search-bars", {
             detail: {},
             bubbles: true,
             composed: true
         }));
-
-        // Réinitialiser l'affichage du temps restant
-        const timeElement = this.shadowRoot.getElementById("remaining-time");
-        timeElement.classList.add("hidden");
-        timeElement.textContent = "Remaining time : 0 min";
-
-        instructionsDiv.classList.add("hidden");
-        if (instructionsDiv) instructionsDiv.classList.add("hidden");
-        if (timeElement) timeElement.classList.add("hidden");
-
-
-        document.querySelector('aside').classList.remove('hidden');
-        document.body.classList.remove('fullmap');
+    
+        if (this.map) {
+            this.map.setView(this.start, LeafletMap.DEFAULT_ZOOM);
+        }
     }
+    
 }
 
 customElements.define("leaflet-map", LeafletMap);
