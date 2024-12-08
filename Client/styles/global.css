@@ -1,0 +1,63 @@
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  display: grid;
+  grid-template-areas: "aside main";
+  grid-template-columns: 2fr 4fr;
+  transition: grid-template-columns 0.3s ease-out;
+}
+
+aside {
+  /* background-color: #2d3a4b;  */
+  grid-area: aside;
+  display: grid;
+  grid-template-rows: 2fr 6fr;
+  transition: transform 0.3s ease-out;
+  width: 100%;
+}
+
+
+main {
+  /* background-color: #75baba; */
+  grid-area: main;
+  transition: width 0.3s ease-out;
+  width: 100%;
+}
+
+aside.hidden {
+  transform: translateX(-100%);
+  width: 0;
+}
+
+
+/* Ajuster la grille quand aside est caché */
+body.fullmap {
+  grid-template-columns: 0 1fr;
+}
+
+.search-zone {
+  background-color: #21324b;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; 
+  align-items: center;
+  gap: 5vh;
+}
+
+search-bar {
+  width: 85%;
+  padding-right: 4%;
+}
+
+.suggestion-zone{
+  background-color: #78B9BA;
+}
+
+input:focus {
+  border-color: #CE472F;
+  box-shadow: 0 0 5px rgba(206, 71, 47, 0.5); 
+}

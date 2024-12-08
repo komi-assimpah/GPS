@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="styles/global.css">
+    <title>Let's go biking</title>
+</head>
+<body>
+    <aside>
+      <div class="search-zone">
+        <search-bar placeholder="Departure position" id="departure"></search-bar>
+        <search-bar placeholder="Destination" id="destination"></search-bar>
+      </div>
+      
+      <div class="suggestion-zone">
+        <div id="itineraries">
+          <itinerary-suggestion id="suggestion1" text="etap1 itinieraire" distance="1.2 Km" time="49 Min" icons="cycling.png"></itinerary-suggestion>
+          <itinerary-suggestion id="suggestion2" text="etap2 itinieraire" distance="3.4 Km" time="32 Min" icons="cycling.png"></itinerary-suggestion>
+        </div>
+
+
+      </div>
+    </aside>
+    
+    <main>
+      <div id="lmap">
+        <leaflet-map id="mapComponent"></leaflet-map>
+      </div>
+    </main>
+
+    <!-- Composants et scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@5.0.0/bundles/stomp.umd.min.js" defer></script>
+    <script src="./components/search-bar/search-bar.js" defer></script>
+    <script src="./components/itinerary-suggestion/itinerary-suggestion.js" defer></script>
+    <script src="./components/itinerary-details/itinerary-details.js" defer></script>
+    <script src="./components/maps/leaflet-map.js" defer></script>
+    <script src="./components/popup/popup.js " defer></script>
+    <script src="./scripts/interaction.js" defer></script>
+
+</body>
+</html>

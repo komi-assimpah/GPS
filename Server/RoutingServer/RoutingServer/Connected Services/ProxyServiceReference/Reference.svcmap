@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ReferenceGroup xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ID="890d7e41-8679-44db-910b-f37ae9f6a0e1" xmlns="urn:schemas-microsoft-com:xml-wcfservicemap">
+  <ClientOptions>
+    <GenerateAsynchronousMethods>false</GenerateAsynchronousMethods>
+    <GenerateTaskBasedAsynchronousMethod>true</GenerateTaskBasedAsynchronousMethod>
+    <EnableDataBinding>true</EnableDataBinding>
+    <ExcludedTypes />
+    <ImportXmlTypes>false</ImportXmlTypes>
+    <GenerateInternalTypes>false</GenerateInternalTypes>
+    <GenerateMessageContracts>false</GenerateMessageContracts>
+    <NamespaceMappings />
+    <CollectionMappings />
+    <GenerateSerializableTypes>true</GenerateSerializableTypes>
+    <Serializer>Auto</Serializer>
+    <UseSerializerForFaults>true</UseSerializerForFaults>
+    <ReferenceAllAssemblies>true</ReferenceAllAssemblies>
+    <ReferencedAssemblies />
+    <ReferencedDataContractTypes />
+    <ServiceContractMappings />
+  </ClientOptions>
+  <MetadataSources>
+    <MetadataSource Address="http://localhost:8733/Design_Time_Addresses/ProxyCache/ProxyService/?wsdl" Protocol="http" SourceId="1" />
+  </MetadataSources>
+  <Metadata>
+    <MetadataFile FileName="ProxyService.wsdl" MetadataType="Wsdl" ID="032c0563-6ab7-44a8-9f8c-33b8872a2383" SourceId="1" SourceUrl="http://localhost:8733/Design_Time_Addresses/ProxyCache/ProxyService/?wsdl" />
+    <MetadataFile FileName="item.xsd" MetadataType="Schema" ID="45e38c0c-a78c-476d-9e3f-1e885b0a622e" SourceId="1" SourceUrl="http://localhost:8733/Design_Time_Addresses/ProxyCache/ProxyService/?xsd=xsd2" />
+    <MetadataFile FileName="item1.xsd" MetadataType="Schema" ID="4e0a9c21-6e4c-4900-88d8-9f480a871ddd" SourceId="1" SourceUrl="http://localhost:8733/Design_Time_Addresses/ProxyCache/ProxyService/?xsd=xsd3" />
+    <MetadataFile FileName="item2.xsd" MetadataType="Schema" ID="888408df-455a-4d42-a352-30b7fd2b12be" SourceId="1" SourceUrl="http://localhost:8733/Design_Time_Addresses/ProxyCache/ProxyService/?xsd=xsd0" />
+    <MetadataFile FileName="item3.xsd" MetadataType="Schema" ID="aaa17bf6-8ced-467b-a8c5-a8ecdf6bb702" SourceId="1" SourceUrl="http://localhost:8733/Design_Time_Addresses/ProxyCache/ProxyService/?xsd=xsd1" />
+  </Metadata>
+  <Extensions>
+    <ExtensionFile FileName="configuration91.svcinfo" Name="configuration91.svcinfo" />
+    <ExtensionFile FileName="configuration.svcinfo" Name="configuration.svcinfo" />
+  </Extensions>
+</ReferenceGroup>
